@@ -21,7 +21,7 @@ const XLSXIO = (() => {
     ["podszyt", w => (w.podsz || []).join(", ")],
     ["podszyt_proc", w => w.podszProc != null ? w.podszProc : ""],
     ["nr_obrebow", w => w.obreby || ""],
-    ["nr_dzialek", w => w.dzialki || ""],
+    ["nr_dzialek", w => Array.isArray(w.dzialki) ? w.dzialki.join(", ") : (w.dzialki || "")],
     ["lat", w => w.lat != null ? w.lat : ""],
     ["lon", w => w.lon != null ? w.lon : ""],
     ["loc_zrodlo", w => w.locZrodlo || ""],

@@ -19,7 +19,7 @@ let trybEdycji = null; // id wpisu, który edytujemy
 function nowyStan() {
   return {
     wies: "", oddz: "", pow: "",
-    obreby: "", dzialki: "",
+    obreby: "", dzialki: [],
     siedlisko: null, panujacy: null, drugi: null, udzialDrugi: 0,
     wiekPrzec: 90, pjd: [], pjdWiekPrzec: 70,
     zwarcie: null, podsz: [], podszProc: 50,
@@ -248,7 +248,36 @@ bindInput("#in-wies", "wies");
 bindInput("#in-oddz", "oddz");
 bindInput("#in-pow", "pow");
 bindInput("#in-obreby", "obreby");
-bindInput("#in-dzialki", "dzialki");
+/* działki: wpisujesz numer, ➜ lub Enter dodaje na listę zwijaną */
+function dzialkiDodaj() {
+  const inp = $("#in-dzialka");
+  const v = inp.value.replace(/[\s,;]+/g, "");
+  if (!v) return;
+  if (!stan.dzialki.includes(v)) { stan.dzialki.push(v); renderDzialki(); rysuj(); }
+  inp.value = ""; inp.focus();
+}
+function dzialkiUsun(v) {
+  stan.dzialki = stan.dzialki.filter(x => x !== v);
+  renderDzialki(); rysuj();
+}
+let dzialkiRozwinięte = false;
+function renderDzialki() {
+  const box = $("#dzialki-chips");
+  const ile = stan.dzialki.length;
+  const LIMIT = 6;
+  const pokaz = dzialkiRozwinięte ? stan.dzialki : stan.dzialki.slice(0, LIMIT);
+  box.innerHTML = pokaz.map(v =>
+    `<span class="chip-x">${v}<i data-dzialka-usun="${v}">×</i></span>`).join("") +
+    (ile > LIMIT && !dzialkiRozwinięte ? `<span class="chips-more" id="dzialki-more">… +${ile - LIMIT} — pokaż</span>` : "") +
+    (ile > LIMIT && dzialkiRozwinięte ? `<span class="chips-more" id="dzialki-more">zwiń ▴</span>` : "");
+}
+document.addEventListener("click", e => {
+  const usun = e.target.closest("[data-dzialka-usun]");
+  if (usun) { dzialkiUsun(usun.dataset.dzialkaUsun); return; }
+  if (e.target.id === "dzialki-more") { dzialkiRozwinięte = !dzialkiRozwinięte; renderDzialki(); }
+});
+$("#btn-dzialka").addEventListener("click", dzialkiDodaj);
+$("#in-dzialka").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); dzialkiDodaj(); } });
 bindInput("#e-wys", "elWys");
 bindInput("#e-pier", "elPier");
 bindInput("#e-bon", "elBon");
@@ -330,7 +359,10 @@ function uzupelnijForm() {
   $("#in-oddz").value = stan.oddz || "";
   $("#in-pow").value = stan.pow || "";
   $("#in-obreby").value = stan.obreby || "";
-  $("#in-dzialki").value = stan.dzialki || "";
+  if (typeof stan.dzialki === "string")
+    stan.dzialki = stan.dzialki.split(",").map(x => x.replace(/\s+/g, "")).filter(Boolean);
+  $("#in-dzialka").value = "";
+  renderDzialki();
   $("#e-wys").value = stan.elWys || ""; $("#e-pier").value = stan.elPier || "";
   $("#e-bon").value = stan.elBon || ""; $("#e-zad").value = stan.elZad || "";
   $("#e-miaz").value = stan.elMiaz || "";

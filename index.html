@@ -65,8 +65,12 @@
       </div>
 
       <div class="f-group">
-        <div class="f-label">Nr-y działek rejestrowych <span class="sub">opcjonalnie — jeśli znane od razu</span></div>
-        <input class="f-input" id="in-dzialki" placeholder="5/501, 8/254, 14/107" autocomplete="off">
+        <div class="f-label">Nr-y działek rejestrowych <span class="sub">wpisz numer i ➜ — pojawi się na liście</span></div>
+        <div class="tag-input">
+          <input class="f-input" id="in-dzialka" placeholder="np. 5/501" autocomplete="off">
+          <button type="button" class="tag-add" id="btn-dzialka" title="dodaj działkę">➜</button>
+        </div>
+        <div class="chips" id="dzialki-chips"></div>
       </div>
 
       <div class="f-group">

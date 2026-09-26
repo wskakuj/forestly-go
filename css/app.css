@@ -86,6 +86,19 @@ button { font-family: var(--font-body); }
 .stepper .val span { font-family: var(--font-mono); font-weight: 600; font-size: 14px; display: block; }
 .stepper .val small { color: var(--dim); font-size: 10.5px; display: block; }
 
+/* wpis działek: pole + strzałka, lista zwijana */
+.tag-input { display: flex; gap: 8px; }
+.tag-input .f-input { flex: 1; }
+.tag-add { width: 54px; border: 0; border-radius: 10px; background: var(--green); color: #fff;
+  font-size: 19px; cursor: pointer; flex: none; }
+.tag-add:active { transform: scale(.95); }
+.chip-x { font-size: 12.5px; font-weight: 600; padding: 8px 8px 8px 13px; border-radius: 999px;
+  background: #fff; border: 1.5px solid rgba(38,48,42,.14); cursor: default; user-select: none;
+  display: inline-flex; align-items: center; gap: 7px; }
+.chip-x i { font-style: normal; color: #b3563f; cursor: pointer; font-weight: 700; padding: 0 4px; }
+.chips-more { font: 600 12px var(--font-mono); color: var(--green2); cursor: pointer; user-select: none;
+  padding: 8px 4px; }
+
 /* lokalizacja */
 .loc { display: flex; gap: 8px; }
 .loc-btn { flex: 1; border: 1.5px solid rgba(38,48,42,.16); background: #fff; border-radius: 10px;

@@ -31,7 +31,8 @@ const OPTAX = (() => {
     if (w.zwarcie) out.push("zw. " + w.zwarcie);
     if (w.podsz && w.podsz.length) out.push("Podsz.: " + w.podsz.join(", ") + " " + (w.podszProc || 0) + "% pow.");
     if (w.obreby && String(w.obreby).trim()) out.push("obr. " + String(w.obreby).trim());
-    if (w.dzialki && String(w.dzialki).trim()) out.push("nr-y.Rej. " + String(w.dzialki).trim());
+    const dz = Array.isArray(w.dzialki) ? w.dzialki.join(", ") : String(w.dzialki || "");
+    if (dz.trim()) out.push("nr-y.Rej. " + dz.trim());
     return out;
   }
 

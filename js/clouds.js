@@ -38,10 +38,20 @@ const CLOUDS = (() => {
     return url;
   }
 
+  const HINT_POLACZENIA = "Nie mogę się połączyć — sprawdź, w tej kolejności: " +
+    "1) czy na serwerze Nextcloud ustawiono CORS: occ config:system:set cors.allowed-domains 0 --value=https://wskakuj.github.io " +
+    "(bez tego przeglądarka blokuje WebDAV, choć login jest dobry); " +
+    "2) czy adres zaczyna się od https:// (nie http://); 3) czy certyfikat jest ważny.";
+
   async function nextcloudTest(cfg) {
     const url = cfg.url.replace(/\/+$/, "") + "/remote.php/dav/files/" + encodeURIComponent(cfg.user) + "/";
-    const resp = await fetch(url, { method: "PROPFIND", headers: {
-      Authorization: "Basic " + btoa(cfg.user + ":" + cfg.pass), Depth: "0" } });
+    let resp;
+    try {
+      resp = await fetch(url, { method: "PROPFIND", headers: {
+        Authorization: "Basic " + btoa(cfg.user + ":" + cfg.pass), Depth: "0" } });
+    } catch (e) {
+      throw new Error("Nextcloud: " + (e.name === "TypeError" ? HINT_POLACZENIA : e.message));
+    }
     if (resp.status === 207) return { ok: true };
     throw new Error("Nextcloud: HTTP " + resp.status + (resp.status === 401 ? " (zły login/hasło aplikacji)" : ""));
   }
