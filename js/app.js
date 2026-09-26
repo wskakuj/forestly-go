@@ -421,6 +421,7 @@ async function rysujSync() {
   $("#s-autor").textContent = autor || "—";
   const dir = await DB.metaGet("folder");
   $("#s-folder").textContent = dir ? dir.name : "nie wybrano";
+  $("#btn-folder").textContent = dir ? "Zmień folder" : "Wybierz folder";
   $("#s-wersja").textContent = typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?";
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
