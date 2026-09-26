@@ -1,0 +1,590 @@
+/* ===================== TAKSATOR TERENOWY — LOGIKA ===================== */
+
+/* ---------- słowniki ---------- */
+const SLOWNIKI = {
+  siedlisko: ["Bs", "Bśw", "Bw", "Bb", "BMśw", "BMw", "LMśw", "LMw", "Lśw", "Lw", "Ol", "OJ"],
+  panujacy:  ["So", "Db", "Św", "Jd", "Bk", "Brz", "Ol", "Os", "Gb", "Js", "Wz"],
+  drugi:     ["So", "Db", "Św", "Brz", "Js", "Ol", "Md", "Dg", "Jw"],
+  pjd:       ["So", "Jw", "Db", "Brz", "Js", "Ol", "Św"],
+  zwarcie:   ["pełne", "duże", "umiark.", "przeryw.", "rzadkie", "luźne"],
+  podsz:     ["krusz", "jrz", "leszcz", "suchodr", "malina", "jeżyna", "bez czarny", "trzmielina"]
+};
+const GRUPY_POJEDYNCZE = new Set(["siedlisko", "panujacy", "drugi", "zwarcie"]);
+const GRUPY_WIELOKROTNE = new Set(["pjd", "podsz"]);
+
+/* ---------- stan formularza ---------- */
+let stan = nowyStan();
+let trybEdycji = null; // id wpisu, który edytujemy
+
+function nowyStan() {
+  return {
+    wies: "", oddz: "", pow: "",
+    obreby: "", dzialki: "",
+    siedlisko: null, panujacy: null, drugi: null, udzialDrugi: 0,
+    wiekPrzec: 90, pjd: [], pjdWiekPrzec: 70,
+    zwarcie: null, podsz: [], podszProc: 50,
+    elWys: "", elPier: "", elBon: "", elZad: "", elMiaz: "",
+    wskTyp: "", wskPow: "", wskMiaz: "",
+    lat: null, lon: null, locZrodlo: null
+  };
+}
+
+/* ---------- narzędzia UI ---------- */
+const $ = s => document.querySelector(s);
+function toast(msg, ms) {
+  const t = $("#toast");
+  t.textContent = msg; t.classList.add("on");
+  clearTimeout(t._tm); t._tm = setTimeout(() => t.classList.remove("on"), ms || 2600);
+}
+function przelaczTab(nazwa) {
+  document.querySelectorAll(".bn").forEach(b => b.classList.toggle("on", b.dataset.tab === nazwa));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "pane-" + nazwa));
+  if (nazwa === "mapa") setTimeout(satInit, 60);
+  if (nazwa === "wykaz") rysujWykaz();
+  if (nazwa === "sync") rysujSync();
+}
+
+/* ---------- kreator startowy ---------- */
+let onbKrok = 0;
+function renderOnb() {
+  const kroki = ["Leśnik", "Folder na telefonie", "Chmury"];
+  const html = [];
+  html.push('<div class="onb-kroki">' + kroki.map((_, i) => `<i class="${i <= onbKrok ? "on" : ""}"></i>`).join("") + "</div>");
+  if (onbKrok === 0) {
+    html.push(`<h3>Kto zbiera dane?</h3>
+      <p>Imię i nazwisko staje się nazwą folderu na serwerze i podpisuje każdy wpis.</p>
+      <input class="f-input" id="onb-autor" placeholder="np. Mietek Kowalski" autocomplete="name">
+      <button type="button" class="fab szary" id="onb-przywroc" style="margin-top:10px">Mam backup — przywróć sesję z folderu</button>`);
+  } else if (onbKrok === 1) {
+    html.push(`<h3>Gdzie zapisywać pliki?</h3>
+      <p>Wskaż folder na tym urządzeniu — Excel z opisami będzie tam widoczny także dla innych aplikacji.</p>
+      <button type="button" class="fab" id="onb-folder">Wybierz folder</button>
+      <button type="button" class="fab szary" id="onb-folder-pomin">Pomiń (będę pobierał pliki ręcznie)</button>`);
+  } else {
+    html.push(`<h3>Kopia zapasowa w chmurach</h3>
+      <p>Główne dane lądują na Twoim Nextcloud (QNAP), a w tej samej chwili kopia na Dysku Google i pCloud.
+      Możesz to teraz pominąć i skonfigurować później w zakładce <b>Sync</b>.</p>
+      <button type="button" class="fab" id="onb-gotowe">Zaczynajmy</button>
+      <button type="button" class="fab szary" id="onb-chmury">Skonfiguruj chmury teraz</button>`);
+  }
+  const box = $("#onb");
+  box.innerHTML = html.join("");
+
+  if (onbKrok === 0) {
+    const inp = $("#onb-autor");
+    inp.value = "";
+    setTimeout(() => inp.focus(), 100);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") onbDalej(); });
+    $("#onb-przywroc").addEventListener("click", async () => {
+      try {
+        const dir = await pokazDialogFolderu();
+        const r = await SESJA.przywroc(dir);
+        if (!r.ok) { toast("W tym folderze nie ma pliku backupu"); return; }
+        await DB.metaSet("folder", dir);
+        toast("Sesja przywrócona: " + r.ile + " wpisów ✓");
+        CLOUDS.log("<b>przywrócono sesję</b> — " + r.ile + " wpisów");
+        await zakonczOnboarding(false);
+        await odswiezStart();
+      } catch (e) { toast("Nie udało się wybrać folderu"); }
+    });
+  } else if (onbKrok === 1) {
+    $("#onb-folder").addEventListener("click", async () => {
+      try {
+        const dir = await pokazDialogFolderu();
+        await DB.metaSet("folder", dir);
+        const r = await SESJA.przywroc(dir);
+        if (r.ok) {
+          toast("Sesja przywrócona: " + r.ile + " wpisów ✓");
+          CLOUDS.log("<b>przywrócono sesję</b> — " + r.ile + " wpisów (" + String(r.zapisano || "").slice(0, 16).replace("T", " ") + ")");
+          await zakonczOnboarding(false);
+          await odswiezStart();
+          return;
+        }
+        toast("Folder zapisany: " + dir.name);
+        onbKrok = 2; renderOnb();
+      } catch (e) { toast("Nie udało się wybrać folderu — spróbuj ponownie"); }
+    });
+    $("#onb-folder-pomin").addEventListener("click", () => { onbKrok = 2; renderOnb(); });
+  } else {
+    $("#onb-gotowe").addEventListener("click", () => zakonczOnboarding(false));
+    $("#onb-chmury").addEventListener("click", () => zakonczOnboarding(true));
+  }
+}
+async function onbDalej() {
+  if (onbKrok === 0) {
+    const v = $("#onb-autor").value.trim();
+    if (!v) { toast("Podaj imię i nazwisko"); return; }
+    await DB.metaSet("autor", v);
+    onbKrok = 1; renderOnb();
+  }
+}
+async function zakonczOnboarding(doChmur) {
+  const autor = await DB.metaGet("autor");
+  if (!autor) { onbKrok = 0; renderOnb(); toast("Najpierw podaj imię i nazwisko"); return; }
+  $("#onboarding").classList.remove("on");
+  odswiezAppbar();
+  przelaczTab(doChmur ? "sync" : "form");
+}
+async function pokazDialogFolderu() {
+  if (window.showDirectoryPicker) return await window.showDirectoryPicker({ mode: "readwrite" });
+  throw new Error("brak File System Access API");
+}
+
+/* ---------- pasek górny ---------- */
+async function odswiezAppbar() {
+  const autor = await DB.metaGet("autor");
+  const sub = $("#ab-sub"), chip = $("#ab-user"), k = $("#ab-kolejka");
+  sub.textContent = stan.wies ? stan.wies + " · app działa offline" : "app działa offline";
+  chip.style.display = autor ? "flex" : "none";
+  chip.textContent = autor ? autor.split(" ").map(x => x[0]).slice(0, 2).join("").toUpperCase() : "?";
+  const kol = await CLOUDS.kolejkaInfo();
+  k.style.display = kol.doWyslania > 0 ? "inline-block" : "none";
+  k.textContent = "kolejka: " + kol.doWyslania;
+  const abObr = $("#ab-obreb");
+  if (stan.wies) { abObr.style.display = "inline-block"; abObr.textContent = stan.wies; }
+  else abObr.style.display = "none";
+}
+
+/* ---------- chips ---------- */
+function renderChips() {
+  document.querySelectorAll(".chips[data-group]").forEach(box => {
+    const g = box.dataset.group;
+    box.innerHTML = SLOWNIKI[g].map(v =>
+      `<span class="chip ${jestAktywny(g, v) ? "on" : ""}" data-v="${v}">${v}</span>`).join("");
+  });
+}
+function jestAktywny(g, v) {
+  if (GRUPY_POJEDYNCZE.has(g)) return stan[g] === v;
+  return stan[g].includes(v);
+}
+document.addEventListener("click", e => {
+  const chip = e.target.closest(".chip[data-v]");
+  if (!chip) return;
+  const box = chip.closest(".chips[data-group]");
+  const g = box.dataset.group, v = chip.dataset.v;
+  if (GRUPY_POJEDYNCZE.has(g)) {
+    stan[g] = stan[g] === v ? null : v;
+    if (g === "drugi" && !stan.drugi) stan.udzialDrugi = 0;
+  } else {
+    const i = stan[g].indexOf(v);
+    if (i >= 0) stan[g].splice(i, 1); else stan[g].push(v);
+  }
+  renderChips(); rysuj();
+});
+
+/* ---------- steppery ---------- */
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-step]");
+  if (!b) return;
+  const krok = parseInt(b.dataset.dir, 10);
+  switch (b.dataset.step) {
+    case "udzial": stan.udzialDrugi = Math.min(9, Math.max(0, stan.udzialDrugi + krok)); break;
+    case "wiek": stan.wiekPrzec = Math.max(10, stan.wiekPrzec + krok); break;
+    case "pjdwiek": stan.pjdWiekPrzec = Math.max(10, stan.pjdWiekPrzec + krok); break;
+    case "podszproc": stan.podszProc = Math.min(100, Math.max(0, stan.podszProc + krok)); break;
+  }
+  rysuj();
+});
+
+/* ---------- podgląd OPTAX ---------- */
+function pvToggle() {
+  const pv = $("#pv");
+  pv.classList.toggle("min");
+  $("#pv-chev").textContent = pv.classList.contains("min") ? "rozwiń ▾" : "zwiń ▴";
+}
+$("#pv-chev").addEventListener("click", pvToggle);
+
+function rysuj() {
+  $("#wiek-linia").textContent = (stan.wiekPrzec - OPTAX.KROK) + "–" + (stan.wiekPrzec + OPTAX.KROK) + " / " + stan.wiekPrzec + " l";
+  $("#wiek-klasa").textContent = "klasa wieku " + OPTAX.klasaWieku(stan.wiekPrzec);
+  $("#pjd-wiek-linia").textContent = (stan.pjdWiekPrzec - OPTAX.KROK) + "–" + (stan.pjdWiekPrzec + OPTAX.KROK) + " / " + stan.pjdWiekPrzec + " l";
+  $("#podsz-proc").textContent = stan.podszProc + "%";
+  $("#e-kl").textContent = "kl. " + OPTAX.klasaWieku(stan.wiekPrzec);
+  $("#udzial-linia").textContent = stan.panujacy || stan.drugi
+    ? (10 - stan.udzialDrugi) + " " + (stan.panujacy || "—") + (stan.drugi ? " ; " + stan.udzialDrugi + " " + stan.drugi : "")
+    : "wybierz gatunki";
+  $("#pv-line").textContent = OPTAX.linie(stan).join("\n");
+  $("#pv-line").classList.remove("pv-flash"); void $("#pv-line").offsetWidth; $("#pv-line").classList.add("pv-flash");
+  $("#pv-stamp").textContent = stan.oddz || "—";
+  const loc = $("#loc-info");
+  loc.textContent = stan.lat != null
+    ? stan.lat.toFixed(5) + "° N · " + stan.lon.toFixed(5) + "° E · " + (stan.locZrodlo || "")
+    : "brak lokalizacji";
+  odswiezAppbar();
+}
+
+/* ---------- pola tekstowe ---------- */
+function bindInput(id, klucz, transform) {
+  const el = $(id);
+  el.addEventListener("input", () => {
+    stan[klucz] = transform ? transform(el.value) : el.value;
+    if (klucz === "wies") odswiezAppbar();
+    rysuj();
+  });
+}
+bindInput("#in-wies", "wies");
+bindInput("#in-oddz", "oddz");
+bindInput("#in-pow", "pow");
+bindInput("#in-obreby", "obreby");
+bindInput("#in-dzialki", "dzialki");
+bindInput("#e-wys", "elWys");
+bindInput("#e-pier", "elPier");
+bindInput("#e-bon", "elBon");
+bindInput("#e-zad", "elZad");
+bindInput("#e-miaz", "elMiaz");
+bindInput("#w-typ", "wskTyp");
+bindInput("#w-pow", "wskPow");
+bindInput("#w-miaz", "wskMiaz");
+
+/* ---------- lokalizacja ---------- */
+function gpsZlapuj() {
+  if (!navigator.geolocation) { toast("To urządzenie nie ma GPS"); return; }
+  toast("Szukam sygnału GPS…");
+  navigator.geolocation.getCurrentPosition(p => {
+    stan.lat = p.coords.latitude; stan.lon = p.coords.longitude;
+    stan.locZrodlo = "GPS";
+    rysuj(); toast("Lokalizacja zapisana (" + stan.lat.toFixed(5) + ", " + stan.lon.toFixed(5) + ")");
+  }, err => toast("GPS niedostępny: " + err.message), { enableHighAccuracy: true, timeout: 15000 });
+}
+$("#btn-gps").addEventListener("click", gpsZlapuj);
+$("#btn-gps2").addEventListener("click", gpsZlapuj);
+$("#btn-mapa").addEventListener("click", () => przelaczTab("mapa"));
+
+/* ---------- mapa ---------- */
+let mapa = null, pinezka = null, satInitDone = false;
+function satInit() {
+  if (satInitDone || typeof L === "undefined") return;
+  const el = $("#mapa-leaflet");
+  if (!el || el.clientWidth === 0) return;
+  mapa = L.map(el, { zoomControl: true }).setView([52.4226, 21.0558], 15);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19, attribution: "Esri World Imagery"
+  }).addTo(mapa);
+  mapa.on("click", e => {
+    const ikona = L.divIcon({ className: "pin-emoji", html: "📍", iconSize: [30, 30], iconAnchor: [15, 27] });
+    if (pinezka) pinezka.setLatLng(e.latlng);
+    else pinezka = L.marker(e.latlng, { icon: ikona }).addTo(mapa);
+    $("#mapa-info").textContent = e.latlng.lat.toFixed(5) + "° N · " + e.latlng.lng.toFixed(5) + "° E";
+    $("#btn-pin-do-opisu").disabled = false;
+  });
+  satInitDone = true;
+}
+$("#btn-pin-do-opisu").addEventListener("click", () => {
+  if (!pinezka) return;
+  const ll = pinezka.getLatLng();
+  stan.lat = ll.lat; stan.lon = ll.lng; stan.locZrodlo = "mapa";
+  rysuj(); przelaczTab("form");
+  toast("Pinezka wpięta do opisu");
+});
+
+/* ---------- zapis wpisu ---------- */
+async function zapiszWpis() {
+  const autor = await DB.metaGet("autor");
+  if (!autor) { toast("Najpierw podaj, kto zbiera dane (kreator)"); return; }
+  if (!stan.wies.trim()) { toast("Podaj obręb / wieś — po tym grupuje się plik Excel"); return; }
+  if (!stan.oddz.trim()) { toast("Podaj oddział"); return; }
+  const wpis = Object.assign({}, stan, {
+    id: trybEdycji || ("w" + Date.now() + "-" + Math.random().toString(36).slice(2, 7)),
+    autor,
+    timestamp: new Date().toISOString(),
+    wersja: 1,
+    status: trybEdycji ? "wkolejce" : "lokalny",
+    poprawionyPoWyslce: undefined
+  });
+  await DB.wpisyPut(wpis);
+  CLOUDS.log("<b>zapisano wpis</b> " + wpis.oddz + " (" + wpis.wies + ") — " + (trybEdycji ? "poprawka, plik w kolejce" : "lokalny"));
+  toast(trybEdycji ? "Poprawka zapisana — plik wróci do kolejki wysyłki" : "Wpis zapisany ✓");
+  trybEdycji = null;
+  SESJA.zapiszZLogiem();
+  stan = nowyStan(); uzupelnijForm();
+  przelaczTab("wykaz");
+  rysujWykaz();
+}
+$("#btn-zapisz").addEventListener("click", zapiszWpis);
+$("#btn-wyczysc").addEventListener("click", () => { trybEdycji = null; stan = nowyStan(); uzupelnijForm(); rysuj(); });
+
+function uzupelnijForm() {
+  $("#in-wies").value = stan.wies || "";
+  $("#in-oddz").value = stan.oddz || "";
+  $("#in-pow").value = stan.pow || "";
+  $("#in-obreby").value = stan.obreby || "";
+  $("#in-dzialki").value = stan.dzialki || "";
+  $("#e-wys").value = stan.elWys || ""; $("#e-pier").value = stan.elPier || "";
+  $("#e-bon").value = stan.elBon || ""; $("#e-zad").value = stan.elZad || "";
+  $("#e-miaz").value = stan.elMiaz || "";
+  $("#w-typ").value = stan.wskTyp || ""; $("#w-pow").value = stan.wskPow || "";
+  $("#w-miaz").value = stan.wskMiaz || "";
+  renderChips();
+}
+
+/* ---------- wykaz ---------- */
+async function rysujWykaz() {
+  const wsie = await DB.wpisyWsie();
+  const wszystkie = await DB.wpisyAll();
+  const box = $("#wykaz-lista");
+  if (!wsie.length) {
+    box.innerHTML = '<div class="wies-naglowek" style="text-align:center;margin-top:30vh">— jeszcze nic nie zebrane —</div>';
+  } else {
+    box.innerHTML = wsie.map(w => {
+      const wpisy = wszystkie.filter(x => x.wies === w);
+      return `<div class="wies-naglowek">${w} · ${wpisy.length}</div>` +
+        wpisy.map(x => `<div class="row-item" data-id="${x.id}">
+          <div class="ri-oddz">${x.oddz}</div>
+          <div class="ri-main"><b>${OPTAX.jednaLinia(x).slice(0, 60)}</b><small>${x.timestamp.slice(0, 10)} · v${x.wersja || 1}</small></div>
+          ${x.status === "wyslany" ? '<span class="st ok">wysłany</span>' : '<span class="st local">lokalny</span>'}
+          <button class="ri-del" data-del="${x.id}" title="usuń">×</button>
+        </div>`).join("");
+    }).join("");
+  }
+  odswiezAppbar();
+}
+$("#wykaz-lista").addEventListener("click", async e => {
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    e.stopPropagation();
+    await DB.wpisyDelete(del.dataset.del);
+    SESJA.zapiszZLogiem();
+    rysujWykaz(); toast("Wpis usunięty");
+    return;
+  }
+  const item = e.target.closest(".row-item");
+  if (item) {
+    const w = (await DB.wpisyAll()).find(x => x.id === item.dataset.id);
+    if (!w) return;
+    trybEdycji = w.id;
+    stan = Object.assign(nowyStan(), w);
+    if (!Array.isArray(stan.pjd)) stan.pjd = [];
+    if (!Array.isArray(stan.podsz)) stan.podsz = [];
+    uzupelnijForm(); rysuj();
+    przelaczTab("form");
+  }
+});
+$("#btn-nowy").addEventListener("click", () => { trybEdycji = null; stan = nowyStan(); uzupelnijForm(); rysuj(); przelaczTab("form"); });
+
+/* ---------- sync ---------- */
+async function rysujSync() {
+  const autor = await DB.metaGet("autor");
+  $("#s-autor").textContent = autor || "—";
+  const dir = await DB.metaGet("folder");
+  $("#s-folder").textContent = dir ? dir.name : "nie wybrano";
+  $("#s-wersja").textContent = typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?";
+  const wsie = await DB.wpisyWsie();
+  const wszystkie = await DB.wpisyAll();
+  odswiezBackupKarte();
+  $("#s-pliki").innerHTML = wsie.length ? wsie.map(w => {
+    const ile = wszystkie.filter(x => x.wies === w).length;
+    const nazwa = XLSXIO.nazwaPliku(w, autor || "x");
+    return `<div class="s-plik">
+      <div class="ri-main"><b>${nazwa}</b><small>${ile} wpisów</small></div>
+      <button class="fab mini" data-wyslij-wies="${w}">Wyślij</button>
+      <button class="fab mini szary" data-zapisz-wies="${w}">Na telefon</button>
+    </div>`;
+  }).join("") : '<div class="s-notka">Brak wpisów — zacznij od zakładki „Nowy opis”.</div>';
+  odswiezAppbar();
+}
+async function wczytajKonfigChmur() {
+  const nc = await DB.metaGet("nextcloud") || {};
+  $("#nc-url").value = nc.url || ""; $("#nc-user").value = nc.user || ""; $("#nc-pass").value = nc.pass || "";
+  const pc = await DB.metaGet("pcloud") || {};
+  $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
+  const gd = await DB.metaGet("gdrive") || {};
+  $("#gd-json").value = gd.sa ? JSON.stringify(gd.sa) : "";
+}
+$("#btn-folder").addEventListener("click", async () => {
+  try {
+    const dir = await pokazDialogFolderu();
+    await DB.metaSet("folder", dir);
+    toast("Folder zapisany: " + dir.name);
+    rysujSync();
+  } catch (e) { toast("Nie udało się wybrać folderu"); }
+});
+$("#btn-nc-save").addEventListener("click", async () => {
+  await DB.metaSet("nextcloud", { url: $("#nc-url").value.trim(), user: $("#nc-user").value.trim(), pass: $("#nc-pass").value });
+  toast("Nextcloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Nextcloud");
+});
+$("#btn-pc-save").addEventListener("click", async () => {
+  await DB.metaSet("pcloud", { token: $("#pc-token").value.trim(), path: $("#pc-path").value.trim() || "/Taksator" });
+  toast("pCloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację pCloud");
+});
+$("#btn-gd-save").addEventListener("click", async () => {
+  try {
+    const sa = JSON.parse($("#gd-json").value);
+    if (!sa.client_email || !sa.private_key) throw new Error("brak client_email/private_key");
+    await DB.metaSet("gdrive", { sa });
+    toast("Dysk Google zapisany"); CLOUDS.log("<b>zapisano</b> konto serwisowe Google");
+  } catch (e) { toast("To nie wygląda na klucz JSON konta serwisowego"); }
+});
+$("#btn-nc-test").addEventListener("click", async () => {
+  const cfg = { url: $("#nc-url").value.trim(), user: $("#nc-user").value.trim(), pass: $("#nc-pass").value };
+  if (!cfg.url || !cfg.user || !cfg.pass) { toast("Wypełnij adres, login i hasło"); return; }
+  toast("Łączę z Nextcloud…");
+  try { await CLOUDS.nextcloudTest(cfg); toast("Nextcloud: połączenie OK ✓"); CLOUDS.log("<b>Nextcloud OK</b> — " + cfg.user + "@" + cfg.url); }
+  catch (e) { toast(e.message); CLOUDS.log("Nextcloud błąd: " + e.message); }
+});
+$("#btn-pc-test").addEventListener("click", async () => {
+  const cfg = { token: $("#pc-token").value.trim() };
+  if (!cfg.token) { toast("Wklej token pCloud"); return; }
+  toast("Łączę z pCloud…");
+  try { const r = await CLOUDS.pcloudTest(cfg); toast("pCloud: OK ✓ (" + (r.email || "konto") + ")"); CLOUDS.log("<b>pCloud OK</b> — " + (r.email || "")); }
+  catch (e) { toast(e.message); CLOUDS.log("pCloud błąd: " + e.message); }
+});
+$("#btn-gd-test").addEventListener("click", async () => {
+  try {
+    const sa = JSON.parse($("#gd-json").value);
+    toast("Podpisuję JWT i łączę z Google…");
+    const r = await CLOUDS.gdriveTest({ sa });
+    toast("Dysk Google: OK ✓ (" + (r.email || "konto serwisowe") + ")");
+    CLOUDS.log("<b>Dysk Google OK</b> — " + (r.email || ""));
+  } catch (e) { toast(e.message); CLOUDS.log("Google błąd: " + e.message); }
+});
+async function odswiezBackupKarte() {
+  const dane = await SESJA.odczytaj(await DB.metaGet("folder")).catch(() => null);
+  $("#s-backup").textContent = dane
+    ? String(dane.zapisano || "").slice(0, 16).replace("T", " ") + " · " + (dane.wpisy || []).length + " wpisów"
+    : "brak pliku w folderze";
+}
+$("#btn-backup-teraz").addEventListener("click", async () => {
+  const r = await SESJA.zapiszZLogiem();
+  toast(r.ok ? "Backup zapisany ✓ (" + r.ile + " wpisów)" : "Najpierw wybierz folder (Urządzenie)");
+  odswiezBackupKarte();
+});
+$("#btn-backup-przywroc").addEventListener("click", async () => {
+  try {
+    const dir = await pokazDialogFolderu();
+    await DB.metaSet("folder", dir);
+    const r = await SESJA.przywroc(dir);
+    if (!r.ok) { toast("W tym folderze nie ma pliku backupu"); return; }
+    toast("Sesja przywrócona: " + r.ile + " wpisów ✓");
+    rysujWykaz(); odswiezAppbar();
+  } catch (e) { toast("Nie udało się wybrać folderu"); }
+});
+window.addEventListener("pagehide", () => { SESJA.zapisz(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) SESJA.zapisz(); });
+$("#s-pliki").addEventListener("click", async e => {
+  const bw = e.target.closest("[data-wyslij-wies]");
+  if (bw) { await wyslijWies(bw.dataset.wyslijWies); return; }
+  const bz = e.target.closest("[data-zapisz-wies]");
+  if (bz) {
+    const wies = bz.dataset.zapiszWies;
+    const autor = await DB.metaGet("autor") || "x";
+    const wpisy = await DB.wpisyByWies(wies);
+    const r = await XLSXIO.zapiszDoFolderu(wies, autor, wpisy);
+    toast(r.folder ? "Zapisano do folderu: " + r.nazwa : "Plik pobrany: " + r.nazwa);
+    CLOUDS.log("<b>zapisano lokalnie</b> " + r.nazwa + (r.folder ? " (folder)" : " (pobieranie)"));
+  }
+});
+$("#btn-wyslij-wszystko").addEventListener("click", async () => {
+  const wsie = await DB.wpisyWsie();
+  if (!wsie.length) { toast("Brak wpisów do wysłania"); return; }
+  for (const w of wsie) await wyslijWies(w, true);
+});
+async function wyslijWies(wies, cicho) {
+  const btn = document.querySelector(`[data-wyslij-wies="${wies}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = "…"; }
+  try {
+    const r = await CLOUDS.synchronizujWies(null, wies);
+    const ok = Object.values(r.raport).filter(v => v === "ok").length;
+    const bledy = Object.entries(r.raport).filter(([k, v]) => v !== "ok");
+    CLOUDS.log(`<b>wysłano ${r.nazwa}</b> — ${r.ile} wpisów, chmury OK: ${ok}/${ok + bledy.length}`);
+    bledy.forEach(([k, v]) => CLOUDS.log("⚠ " + k + ": " + v));
+    toast(ok ? "Wysłano ✓ (" + ok + " chmur" + (ok > 1 ? "y" : "") + ", " + r.ile + " wpisów)" : "Błąd wysyłki — szczegóły w dzienniku");
+    SESJA.zapiszZLogiem();
+  } catch (e) {
+    CLOUDS.log("⚠ wysyłka nieudana: " + e.message);
+    toast("Wysyłka nie udała się: " + e.message);
+  }
+  rysujSync();
+}
+
+/* ---------- nawigacja ---------- */
+$("#bnav").addEventListener("click", e => {
+  const bn = e.target.closest(".bn");
+  if (bn) przelaczTab(bn.dataset.tab);
+});
+
+/* ---------- start ---------- */
+async function start() {
+  renderChips();
+  const autor = await DB.metaGet("autor");
+  if (!autor) { onbKrok = 0; renderOnb(); }
+  else {
+    $("#onboarding").classList.remove("on");
+    const ostatniaWies = await DB.metaGet("ostatniaWies");
+    if (ostatniaWies) stan.wies = ostatniaWies;
+  }
+  // datalist wsi
+  const wsie = await DB.wpisyWsie();
+  $("#dl-wsie").innerHTML = wsie.map(w => `<option value="${w}">`).join("");
+  bindOnbKeys();
+  odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur();
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+  $("#in-wies").addEventListener("change", async e => {
+    await DB.metaSet("ostatniaWies", e.target.value);
+  });
+}
+async function odswiezStart() {
+  const wsie = await DB.wpisyWsie();
+  $("#dl-wsie").innerHTML = wsie.map(w => `<option value="${w}">`).join("");
+  odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur();
+}
+function bindOnbKeys() {
+  // obsługa Enter w kreatorze — delegowana
+  $("#onb").addEventListener("keydown", e => {
+    if (e.key === "Enter" && onbKrok === 0) onbDalej();
+  });
+}
+start();
+
+/* ---------- autotest (uruchamiany z ?test=1) ---------- */
+if (new URLSearchParams(location.search).get("test")) {
+  window.__TEST__ = async function () {
+    const wyniki = [];
+    const sprawdz = (nazwa, warunek, extra) => {
+      wyniki.push((warunek ? "OK  " : "FAIL") + " " + nazwa + (extra ? " | " + extra : ""));
+    };
+    try {
+      // 1. onboarding
+      $("#onb-autor").value = "Mietek Kowalski";
+      await onbDalej();
+      sprawdz("onboarding krok 1 -> 2", onbKrok === 1);
+      // 2. formularz
+      stan.wies = "Lasków"; stan.oddz = "251f"; stan.pow = "3,85";
+      stan.siedlisko = "LMśw"; stan.panujacy = "So"; stan.drugi = "Db"; stan.udzialDrugi = 1;
+      stan.obreby = "5, 8, 14"; stan.dzialki = "5/501, 8/254";
+      stan.zwarcie = "umiark."; stan.podsz = ["krusz", "jrz"]; stan.podszProc = 50;
+      rysuj();
+      sprawdz("podglad OPTAX", $("#pv-line").textContent.includes("LMśw") &&
+        $("#pv-line").textContent.includes("nr-y.Rej. 5/501"), $("#pv-line").textContent.replace(/\n/g, " / "));
+      // 3. zapis wpisu
+      await zapiszWpis();
+      const po = await DB.wpisyAll();
+      sprawdz("wpis zapisany w IndexedDB", po.length === 1 && po[0].oddz === "251f");
+      // 4. XLSX
+      const blob = await XLSXIO.blobZwpisow(po);
+      sprawdz("XLSX zbudowany", blob.size > 3000, blob.size + " B");
+      // 5. edycja wpisu (poprawka)
+      const zapisany = po[0];
+      trybEdycji = zapisany.id;
+      stan = Object.assign(nowyStan(), zapisany); stan.pow = "4,00";
+      await zapiszWpis();
+      const po2 = await DB.wpisyAll();
+      sprawdz("poprawka nadpisuje wpis", po2.length === 1 && po2[0].pow === "4,00");
+      // 6. WebDAV mock (serwer na :8123)
+      await DB.metaSet("nextcloud", { url: "http://localhost:8123", user: "mietek", pass: "tokensekret" });
+      const wynik = await CLOUDS.synchronizujWies(null, "Lasków");
+      sprawdz("synchronizacja WebDAV", wynik.raport.nextcloud === "ok", JSON.stringify(wynik.raport));
+      const po3 = await DB.wpisyAll();
+      sprawdz("wpisy oznaczone jako wyslane", po3.every(w => w.status === "wyslany"));
+      // 7. wykluczenie XLSX z folderu (bez uchwytu) — tylko rozmiar
+      const nazwa = XLSXIO.nazwaPliku("Lasków", "Mietek Kowalski");
+      sprawdz("nazwa pliku", nazwa === "Taksator_Mietek_Kowalski_Laskow.xlsx", nazwa);
+    } catch (e) {
+      wyniki.push("FAIL wyjatek: " + (e && e.message));
+    }
+    $("#testout").textContent = wyniki.join("\n");
+    document.title = wyniki.some(w => w.startsWith("FAIL")) ? "TESTY-FAIL" : "TESTY-OK";
+  };
+  window.addEventListener("load", () => setTimeout(window.__TEST__, 300));
+}

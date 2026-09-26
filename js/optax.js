@@ -1,0 +1,42 @@
+/* ===================== SKŁADANIE OPISU OPTAX =====================
+   Z obiektu 'wpis' składamy wieloliniowy opis jak w pliku OPTAX. */
+
+const OPTAX = (() => {
+  const KROK = 5; // połowa przedziału wieku
+
+  function klasaWieku(wiek) {
+    // klasa I = 1–20 l, II = 21–40 l, ... (zaokrąglone w dół do pełnych 20)
+    const n = Math.max(1, Math.ceil(wiek / 20));
+    const rzymskie = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+    return rzymskie[Math.min(n, rzymskie.length - 1)] || "XII";
+  }
+
+  function sklad(w) {
+    if (!w.panujacy) return "";
+    if (w.drugi && w.udzialDrugi > 0)
+      return (10 - w.udzialDrugi) + w.panujacy + ";" + w.udzialDrugi + w.drugi;
+    return "10" + w.panujacy;
+  }
+
+  /* pełny, wieloliniowy opis — jak w czarnej belce podglądu */
+  function linie(w) {
+    const out = [];
+    const s = w.siedlisko || "—";
+    out.push(s + "  " + (sklad(w) || "—"));
+    if (w.panujacy)
+      out.push(w.panujacy + "/" + (w.wiekPrzec - KROK) + "-" + (w.wiekPrzec + KROK) + "/" + w.wiekPrzec + "l");
+    if (w.pjd && w.pjd.length)
+      out.push("pjd." + w.pjd.join(", ") + "/" + (w.pjdWiekPrzec - KROK) + "-" +
+        (w.pjdWiekPrzec + KROK) + "/" + w.pjdWiekPrzec + "l");
+    if (w.zwarcie) out.push("zw. " + w.zwarcie);
+    if (w.podsz && w.podsz.length) out.push("Podsz.: " + w.podsz.join(", ") + " " + (w.podszProc || 0) + "% pow.");
+    if (w.obreby && String(w.obreby).trim()) out.push("obr. " + String(w.obreby).trim());
+    if (w.dzialki && String(w.dzialki).trim()) out.push("nr-y.Rej. " + String(w.dzialki).trim());
+    return out;
+  }
+
+  /* jedna linia (do podglądu skróconego / wykazu) */
+  function jednaLinia(w) { return linie(w).join(" "); }
+
+  return { KROK, klasaWieku, sklad, linie, jednaLinia };
+})();

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3a5c33">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Forestly GO</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- ======================= PASEK GÓRNY ======================= -->
+<header class="appbar">
+  <div class="ab-title">
+    <b>Forestly GO</b>
+    <small id="ab-sub">taksator terenowy</small>
+  </div>
+  <span class="obreb" id="ab-obreb" style="display:none"></span>
+  <span class="sync-badge" id="ab-kolejka" style="display:none">kolejka: 0</span>
+  <div class="user-chip" id="ab-user" style="display:none">?</div>
+</header>
+
+<!-- ======================= ZAWARTOŚĆ ======================= -->
+<main id="app">
+
+  <!-- ---------- WYKAZ ---------- -->
+  <div class="pane" id="pane-wykaz">
+    <div class="scroller">
+      <div id="wykaz-lista"></div>
+      <button class="fab" id="btn-nowy">+ Nowy opis</button>
+    </div>
+  </div>
+
+  <!-- ---------- NOWY OPIS ---------- -->
+  <div class="pane on" id="pane-form">
+    <div class="scroller">
+
+      <div class="f-group">
+        <div class="f-label">Obręb / wieś <span class="sub">plik Excel grupuje się po tym polu</span></div>
+        <input class="f-input" id="in-wies" list="dl-wsie" autocomplete="off" placeholder="np. Lasków">
+        <datalist id="dl-wsie"></datalist>
+      </div>
+
+      <div class="f-row2">
+        <div class="f-group">
+          <div class="f-label">Oddz. / poddz.</div>
+          <input class="f-input" id="in-oddz" placeholder="251 / f" autocomplete="off">
+        </div>
+        <div class="f-group">
+          <div class="f-label">Pow. [ha]</div>
+          <input class="f-input" id="in-pow" inputmode="decimal" placeholder="3,85" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Numery obrębów <span class="sub">zaznaczone na mapie w terenie</span></div>
+        <input class="f-input" id="in-obreby" placeholder="5, 8, 14, 16, 28, 36" autocomplete="off">
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Nr-y działek rejestrowych <span class="sub">opcjonalnie — jeśli znane od razu</span></div>
+        <input class="f-input" id="in-dzialki" placeholder="5/501, 8/254, 14/107" autocomplete="off">
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Siedlisko</div>
+        <div class="chips" data-group="siedlisko"></div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Gatunek panujący</div>
+        <div class="chips" data-group="panujacy"></div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Drugi gatunek <span class="sub">udział kręcisz obok</span></div>
+        <div class="chips" data-group="drugi"></div>
+        <div class="stepper">
+          <button type="button" data-step="udzial" data-dir="-1">−</button>
+          <div class="val"><span id="udzial-linia">10 So</span><small>skład warstwy (dziesiątki)</small></div>
+          <button type="button" data-step="udzial" data-dir="1">+</button>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Wiek warstwy głównej <span class="sub">kręć strzałkami</span></div>
+        <div class="stepper">
+          <button type="button" data-step="wiek" data-dir="-5">−</button>
+          <div class="val"><span id="wiek-linia">85–95 / 90 l</span><small id="wiek-klasa">klasa wieku VI</small></div>
+          <button type="button" data-step="wiek" data-dir="5">+</button>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Przedrostek / drugie piętro <span class="sub">pjd. — wiele gatunków</span></div>
+        <div class="chips" data-group="pjd"></div>
+        <div class="stepper">
+          <button type="button" data-step="pjdwiek" data-dir="-5">−</button>
+          <div class="val"><span id="pjd-wiek-linia">65–75 / 70 l</span><small>wiek pjd.</small></div>
+          <button type="button" data-step="pjdwiek" data-dir="5">+</button>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Zwarcie</div>
+        <div class="chips" data-group="zwarcie"></div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Podszyt <span class="sub">wiele gatunków</span></div>
+        <div class="chips" data-group="podsz"></div>
+        <div class="stepper">
+          <button type="button" data-step="podszproc" data-dir="-10">−</button>
+          <div class="val"><span id="podsz-proc">50%</span><small>pokrycia podszytu</small></div>
+          <button type="button" data-step="podszproc" data-dir="10">+</button>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Elementy taksacyjne <span class="sub">opcjonalnie, uzupełnisz jak trzeba</span></div>
+        <div class="f-row3">
+          <input class="f-input" id="e-wys" inputmode="decimal" placeholder="wys. m" autocomplete="off">
+          <input class="f-input" id="e-pier" inputmode="decimal" placeholder="pierś. cm" autocomplete="off">
+          <input class="f-input" id="e-bon" placeholder="bon. (I)" autocomplete="off">
+        </div>
+        <div class="f-row3" style="margin-top:8px">
+          <input class="f-input" id="e-zad" placeholder="zad. (10%)" autocomplete="off">
+          <input class="f-input" id="e-miaz" inputmode="decimal" placeholder="miąż. m³/ha" autocomplete="off">
+          <div class="f-input statyczny" id="e-kl">kl. VI</div>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Wskazania <span class="sub">opcjonalnie</span></div>
+        <div class="f-row3">
+          <input class="f-input" id="w-typ" placeholder="TP-40" autocomplete="off">
+          <input class="f-input" id="w-pow" inputmode="decimal" placeholder="pow. ha" autocomplete="off">
+          <input class="f-input" id="w-miaz" inputmode="decimal" placeholder="miąż. m³" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="f-group">
+        <div class="f-label">Lokalizacja</div>
+        <div class="loc">
+          <button type="button" class="loc-btn" id="btn-gps">📡 Tu stoję (GPS)</button>
+          <button type="button" class="loc-btn" id="btn-mapa">📍 Pinezka na mapie</button>
+        </div>
+        <div class="loc-info" id="loc-info">brak lokalizacji</div>
+      </div>
+
+      <button class="fab" id="btn-zapisz">✓ Zapisz wpis</button>
+      <button class="fab szary" id="btn-wyczysc">Nowy pusty wpis</button>
+
+    </div>
+  </div>
+
+  <!-- ---------- MAPA ---------- -->
+  <div class="pane" id="pane-mapa">
+    <div id="mapa-leaflet"></div>
+    <div class="mapa-pasek">
+      <button type="button" class="loc-btn" id="btn-gps2">📡 Tu stoję (GPS)</button>
+      <span class="mapa-info" id="mapa-info">kliknij mapę, aby postawić pinezkę</span>
+      <button type="button" class="fab mini" id="btn-pin-do-opisu" disabled>Użyj pinezki w opisie</button>
+    </div>
+  </div>
+
+  <!-- ---------- SYNC ---------- -->
+  <div class="pane" id="pane-sync">
+    <div class="scroller">
+
+      <div class="s-karta">
+        <div class="s-tytul">Urządzenie</div>
+        <div class="s-wiersz"><span>Leśnik</span><b id="s-autor">—</b></div>
+        <div class="s-wiersz"><span>Folder na telefonie</span><b id="s-folder">nie wybrano</b></div>
+        <div class="s-wiersz"><span>Wersja aplikacji</span><b id="s-wersja">—</b></div>
+        <button type="button" class="loc-btn" id="btn-folder">Wybierz folder</button>
+        <div class="s-notka">Excel zapisuje się bezpośrednio do tego folderu — widoczny dla innych aplikacji.</div>
+      </div>
+
+      <div class="s-karta">
+        <div class="s-tytul">Pliki do wysłania</div>
+        <div id="s-pliki"></div>
+        <button type="button" class="fab" id="btn-wyslij-wszystko">Wyślij teraz</button>
+        <div class="s-notka">Każde „wyślij” wrzuca plik na Nextcloud (fizycznie: Twój QNAP), a w tej samej
+        chwili kopię na Dysk Google i pCloud. Poprawka wpisu przed wysłaniem = nowa wersja pliku.</div>
+      </div>
+
+      <div class="s-karta">
+        <div class="s-tytul">Backup sesji</div>
+        <div class="s-wiersz"><span>Ostatni zapis</span><b id="s-backup">—</b></div>
+        <div class="s-notka">Po każdym wpisie cała sesja (autor + wszystkie opisy, bez haseł)
+        zapisuje się jako plik <span class="mono">ForestlyGO_sesja_….json</span> w wybranym folderze.
+        Gdy przeglądarka wyczyści swoje dane (np. iPhone po tygodniu), wskazujesz folder raz —
+        a wszystkie wpisy wracają na miejsce.</div>
+        <div class="s-akcje"><button type="button" class="loc-btn" id="btn-backup-teraz">Zapisz teraz</button>
+        <button type="button" class="loc-btn" id="btn-backup-przywroc">Przywróć z folderu</button></div>
+      </div>
+
+      <div class="s-karta">
+        <div class="s-tytul">Chmury</div>
+
+        <div class="cloud-row">
+          <div class="dot">N</div>
+          <div><b>Nextcloud (główna)</b><small>WebDAV na Twoim QNAP</small></div>
+        </div>
+        <input class="f-input" id="nc-url" placeholder="https://nextcloud.twojadomena.pl" autocomplete="off">
+        <input class="f-input" id="nc-user" placeholder="login" autocomplete="off">
+        <input class="f-input" id="nc-pass" type="password" placeholder="hasło aplikacji (Ustawienia → Bezpieczeństwo)">
+        <div class="s-akcje"><button type="button" class="loc-btn" id="btn-nc-test">Testuj</button>
+        <button type="button" class="loc-btn" id="btn-nc-save">Zapisz</button></div>
+
+        <div class="cloud-row">
+          <div class="dot">p</div>
+          <div><b>pCloud (kopia)</b><small>token aplikacji</small></div>
+        </div>
+        <input class="f-input" id="pc-token" type="password" placeholder="token pCloud" autocomplete="off">
+        <input class="f-input" id="pc-path" placeholder="/Taksator" autocomplete="off">
+        <div class="s-akcje"><button type="button" class="loc-btn" id="btn-pc-test">Testuj</button>
+        <button type="button" class="loc-btn" id="btn-pc-save">Zapisz</button></div>
+
+        <div class="cloud-row">
+          <div class="dot">G</div>
+          <div><b>Dysk Google (kopia)</b><small>konto serwisowe — klucz JSON</small></div>
+        </div>
+        <input class="f-input" id="gd-json" placeholder='{"type": "service_account", ...}' autocomplete="off">
+        <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
+        <button type="button" class="loc-btn" id="btn-gd-save">Zapisz</button></div>
+
+        <div class="s-notka">Chmury można pominąć — aplikacja działa offline, a Excel pobierzesz ręcznie.
+        Dane logowania trzymamy tylko na tym urządzeniu.</div>
+      </div>
+
+      <div class="s-karta">
+        <div class="s-tytul">Dziennik</div>
+        <div class="log" id="s-log"></div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- ======================= PODGLĄD OPTAX (nad nawigacją) ======================= -->
+<div class="preview min" id="pv">
+  <div class="pv-label"><span>PODGLĄD — LINIJKA DO OPTAX</span>
+    <span style="display:flex;gap:10px;align-items:center">
+      <span id="pv-stamp">—</span>
+      <span class="pv-toggle" id="pv-chev">rozwiń ▾</span>
+    </span>
+  </div>
+  <div class="pv-line" id="pv-line"></div>
+  <div class="pv-note">obręb i działki na końcu — jak w pliku OPTAX</div>
+</div>
+
+<!-- ======================= NAWIGACJA ======================= -->
+<nav class="bnav" id="bnav">
+  <div class="bn" data-tab="wykaz"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Wykaz</span></div>
+  <div class="bn on" data-tab="form"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Nowy opis</span></div>
+  <div class="bn" data-tab="mapa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Mapa</span></div>
+  <div class="bn" data-tab="sync"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11A8 8 0 0 0 6.3 6.3L4 8.5"/><path d="M4 4v5h5"/><path d="M4 13a8 8 0 0 0 13.7 4.7L20 15.5"/><path d="M20 20v-5h-5"/></svg><span>Sync</span></div>
+</nav>
+
+<!-- ======================= KREATOR STARTOWY ======================= -->
+<div class="overlay on" id="onboarding">
+  <div class="onb" id="onb"></div>
+</div>
+
+<!-- ======================= TOAST ======================= -->
+<div id="toast" class="toast"></div>
+
+<pre id="testout" style="display:none"></pre>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/leaflet.js"></script>
+<script src="js/db.js"></script>
+<script src="js/optax.js"></script>
+<script src="js/xlsx-io.js"></script>
+<script src="js/clouds.js"></script>
+<script src="js/session.js"></script>
+<script src="js/wersja.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
