@@ -419,8 +419,6 @@ async function zapiszWpis() {
   const autor = await DB.metaGet("autor");
   if (!autor) { toast("Najpierw podaj, kto zbiera dane (kreator)"); return; }
   if (!stan.wies.trim()) { toast("Podaj obręb / wieś — po tym grupuje się plik Excel"); return; }
-  if (!stan.oddz.trim()) { toast("Podaj oddział"); return; }
-  if (stan.poddz && !/^\d+$/.test(stan.oddz.trim())) { toast("Oddział ma być numerem (pododdział wpisz w drugim polu)"); return; }
   const wpis = Object.assign({}, stan, {
     id: trybEdycji || ("w" + Date.now() + "-" + Math.random().toString(36).slice(2, 7)),
     autor,
@@ -431,10 +429,16 @@ async function zapiszWpis() {
   });
   await DB.wpisyPut(wpis);
   CLOUDS.log("<b>zapisano wpis</b> " + oddzPelne(wpis) + " (" + wpis.wies + ") — " + (trybEdycji ? "poprawka, plik w kolejce" : "lokalny"));
-  toast(trybEdycji ? "Poprawka zapisana — plik wróci do kolejki wysyłki" : "Wpis zapisany ✓");
+  toast(trybEdycji ? "Poprawka zapisana — plik wróci do kolejki wysyłki" : "Opis zapisany ✓");
   trybEdycji = null;
   SESJA.zapiszZLogiem();
+  const zapisanaWies = wpis.wies;
   stan = nowyStan(); uzupelnijForm();
+  // wracamy do widoku opisów wsi, do której należy zapisany opis
+  aktywnaWies = zapisanaWies;
+  localStorage.setItem("aktywnaWies", aktywnaWies);
+  odswiezListeWsi();
+  odswiezAppbar();
   przelaczTab("wykaz");
   rysujWykaz();
 }
@@ -769,6 +773,103 @@ $("#bnav").addEventListener("click", e => {
   if (bn) przelaczTab(bn.dataset.tab);
 });
 
+/* ---------- podpowiedzi wsi (własna rozwijana lista) ---------- */
+let znaneWsie = [];
+async function odswiezListeWsi() { znaneWsie = await DB.wpisyWsie(); }
+function bindAutoWsie() {
+  const inp = $("#in-wies"), lista = $("#auto-wsie");
+  if (!inp || !lista) return;
+  const pokaz = () => {
+    const q = inp.value.trim().toLowerCase();
+    const traf = znaneWsie.filter(w => w.toLowerCase().includes(q)).slice(0, 6);
+    if (!q || !traf.length || (traf.length === 1 && traf[0].toLowerCase() === q)) { lista.classList.remove("on"); return; }
+    lista.innerHTML = traf.map(w => `<div class="auto-poz" data-w="${w}">${w}</div>`).join("");
+    lista.classList.add("on");
+  };
+  const schowaj = () => setTimeout(() => lista.classList.remove("on"), 140);
+  inp.addEventListener("input", pokaz);
+  inp.addEventListener("focus", pokaz);
+  inp.addEventListener("blur", schowaj);
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Escape") { lista.classList.remove("on"); e.preventDefault(); }
+  });
+  lista.addEventListener("mousedown", e => {
+    const poz = e.target.closest(".auto-poz");
+    if (!poz) return;
+    e.preventDefault(); // nie gub fokusu zanim wybierzemy
+    inp.value = poz.dataset.w;
+    lista.classList.remove("on");
+    inp.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".auto-box")) lista.classList.remove("on");
+  });
+}
+bindAutoWsie();
+
+/* ---------- sprawdzanie aktualizacji (ręczny przycisk w Sync) ---------- */
+async function sprawdzAktualizacjeRecznie() {
+  const btn = $("#btn-sprawdz-aktualizacje");
+  const bylTekst = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Sprawdzam…"; }
+  const wroc = () => { if (btn) { btn.disabled = false; btn.textContent = bylTekst; } };
+  const moja = APK_WERSJA || (typeof WERSJA_APLIKACJI !== "undefined" ? String(WERSJA_APLIKACJI).replace(/^v/, "") : "");
+  if (!moja) { toast("Nie znam wersji aplikacji"); wroc(); return; }
+  try {
+    // wymuszamy świeże sprawdzenie — pomijamy 6-godzinny limit
+    localStorage.setItem("apk_check", "0");
+    const r = await fetch("https://api.github.com/repos/wskakuj/forestly-go/releases/latest");
+    if (!r.ok) { toast("GitHub nie odpowiedział (" + r.status + ")"); wroc(); return; }
+    const rel = await r.json();
+    const najnowsza = (rel.tag_name || "").replace(/^v/, "");
+    if (!najnowsza) { toast("Nie znalazłem wydań na GitHubie"); wroc(); return; }
+    if (porownajWersje(najnowsza, moja) <= 0) {
+      localStorage.removeItem("apk_dostepna");
+      const baner = document.getElementById("baner-apk"); if (baner) baner.remove();
+      toast("Masz najnowszą wersję: " + moja + " ✓");
+      CLOUDS.log("sprawdzono aktualizacje — bieżąca " + moja + " jest najnowsza");
+      wroc(); return;
+    }
+    // jest nowsza wersja
+    localStorage.setItem("apk_dostepna", najnowsza);
+    const apk = (rel.assets || []).find(a => a.name === "ForestlyGO.apk");
+    const url = apk ? apk.browser_download_url : (rel.html_url || "");
+    localStorage.setItem("apk_url", url);
+    CLOUDS.log("<b>dostępna nowa wersja</b> " + najnowsza + " (masz " + moja + ")");
+    if (!APK_WERSJA) {
+      // przeglądarka / PWA — aktualizuje się sama przez service workera
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) await reg.update().catch(() => {});
+      }
+      toast("Nowa wersja " + najnowsza + " — zamknij i otwórz aplikację, sama się podmieni");
+      wroc(); return;
+    }
+    // APK — pytamy, pobieramy, podpowiadamy instalację
+    if (!confirm("Jest nowa wersja: " + najnowsza + " (masz " + moja + ").\n\nPobrać i zainstalować?")) {
+      localStorage.setItem("apk_omin", najnowsza); wroc(); return;
+    }
+    if (!url || !apk) { window.open(rel.html_url || "https://github.com/wskakuj/forestly-go/releases/latest", "_blank"); wroc(); return; }
+    if (btn) btn.textContent = "Pobieram " + najnowsza + "…";
+    const rr = await fetch(url);
+    if (!rr.ok) { toast("Nie udało się pobrać (" + rr.status + ")"); wroc(); return; }
+    const blob = await rr.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ForestlyGO-" + najnowsza + ".apk";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    localStorage.removeItem("apk_omin");
+    const baner = document.getElementById("baner-apk"); if (baner) baner.remove();
+    CLOUDS.log("pobrano instalator " + najnowsza + " — otwórz go z powiadomienia (lub z Pobranych), żeby zainstalować");
+    toast("Pobrano ✓ — dotknij powiadomienia (albo plik w Pobranych), żeby zainstalować", 6000);
+  } catch (e) {
+    toast("Nie udało się sprawdzić: " + (e && e.message ? e.message : "błąd sieci"));
+  }
+  wroc();
+}
+$("#btn-sprawdz-aktualizacje").addEventListener("click", sprawdzAktualizacjeRecznie);
+
 /* ---------- start ---------- */
 async function start() {
   renderChips();
@@ -780,9 +881,8 @@ async function start() {
     if (ostatniaWies) stan.wies = ostatniaWies;
     przelaczTab("wsie");
   }
-  // datalist wsi
-  const wsie = await DB.wpisyWsie();
-  $("#dl-wsie").innerHTML = wsie.map(w => `<option value="${w}">`).join("");
+  // lista znanych wsi (podpowiedzi przy wpisywaniu)
+  await odswiezListeWsi();
   bindOnbKeys();
   odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur(); sprawdzAktualizacjeApk();
   if ("serviceWorker" in navigator) {
@@ -805,8 +905,7 @@ async function start() {
   });
 }
 async function odswiezStart() {
-  const wsie = await DB.wpisyWsie();
-  $("#dl-wsie").innerHTML = wsie.map(w => `<option value="${w}">`).join("");
+  await odswiezListeWsi();
   odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur();
 }
 function bindOnbKeys() {

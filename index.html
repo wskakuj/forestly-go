@@ -52,8 +52,10 @@
 
       <div class="f-group">
         <div class="f-label">Obręb / wieś <span class="sub">plik Excel grupuje się po tym polu</span></div>
-        <input class="f-input" id="in-wies" list="dl-wsie" autocomplete="off" placeholder="np. Lasków">
-        <datalist id="dl-wsie"></datalist>
+        <div class="auto-box">
+          <input class="f-input" id="in-wies" autocomplete="off" placeholder="np. Lasków">
+          <div class="auto-lista" id="auto-wsie"></div>
+        </div>
       </div>
 
 
@@ -157,7 +159,7 @@
         <div class="loc-info" id="loc-info">brak lokalizacji</div>
       </div>
 
-      <button class="fab" id="btn-zapisz">✓ Zapisz wpis</button>
+      <button class="fab" id="btn-zapisz">✓ Zapisz opis</button>
 
     </div>
   </div>
@@ -181,6 +183,7 @@
         <div class="s-wiersz"><span>Leśnik</span><b id="s-autor">—</b></div>
         <div class="s-wiersz"><span>Folder na telefonie</span><b id="s-folder">nie wybrano</b></div>
         <div class="s-wiersz"><span>Wersja aplikacji</span><b id="s-wersja">—</b></div>
+        <div class="s-akcje"><button type="button" class="loc-btn" id="btn-sprawdz-aktualizacje">↻ Sprawdź aktualizacje</button></div>
         <button type="button" class="fab" id="btn-instaluj" style="display:none;margin:10px 0 0">📲 Zainstaluj Forestly GO</button>
         <button type="button" class="loc-btn" id="btn-folder">Wybierz folder</button>
         <div class="s-notka">Excel zapisuje się bezpośrednio do tego folderu — widoczny dla innych aplikacji.<br>Przeglądarka podaje tylko nazwę folderu (bez pełnej ścieżki) — to jej celowe ograniczenie.</div>

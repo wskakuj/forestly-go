@@ -1,4 +1,4 @@
-# Co nowego w Forestly GO v1.0.15
+# Co nowego w Forestly GO v1.0.16
 
-* online release
+* releaser update
 
