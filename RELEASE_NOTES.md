@@ -1,5 +1,4 @@
-# Co nowego w Forestly GO v1.0.13
+# Co nowego w Forestly GO v1.0.14
 
-* app new
-* 
+* new theme
 

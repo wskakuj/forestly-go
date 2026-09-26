@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#3a5c33">
+<meta name="theme-color" content="#0b0f14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -30,6 +30,14 @@
 <!-- ======================= ZAWARTOŚĆ ======================= -->
 <main id="app">
 
+  <!-- ---------- PULPIT WSI ---------- -->
+  <div class="pane on" id="pane-wsie">
+    <div class="scroller">
+      <div class="pulpit-info">Wybierz wieś — zobaczysz jej opisy</div>
+      <div class="wies-grid" id="wies-grid"></div>
+    </div>
+  </div>
+
   <!-- ---------- WYKAZ ---------- -->
   <div class="pane" id="pane-wykaz">
     <div class="scroller">
@@ -39,7 +47,7 @@
   </div>
 
   <!-- ---------- NOWY OPIS ---------- -->
-  <div class="pane on" id="pane-form">
+  <div class="pane" id="pane-form">
     <div class="scroller">
 
       <div class="f-group">
@@ -52,7 +60,7 @@
       <div class="f-group">
         <div class="f-label">Numer wydzielenia <span class="sub">wpisz numer i ➜ — pojawi się na liście</span></div>
         <div class="tag-input">
-          <input class="f-input" id="in-dzialka" placeholder="np. 5/501" autocomplete="off">
+          <input class="f-input" id="in-dzialka" placeholder="np. 10" autocomplete="off">
           <button type="button" class="tag-add" id="btn-dzialka" title="dodaj działkę">➜</button>
         </div>
         <div class="chips" id="dzialki-chips"></div>
@@ -260,7 +268,7 @@
 <!-- ======================= NAWIGACJA ======================= -->
 <nav class="bnav" id="bnav">
   <div class="bn" data-tab="wykaz"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Wykaz</span></div>
-  <div class="bn on" data-tab="form"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Nowy opis</span></div>
+  <div class="bn" data-tab="form"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Nowy opis</span></div>
   <div class="bn" data-tab="mapa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Mapa</span></div>
   <div class="bn" data-tab="sync"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11A8 8 0 0 0 6.3 6.3L4 8.5"/><path d="M4 4v5h5"/><path d="M4 13a8 8 0 0 0 13.7 4.7L20 15.5"/><path d="M20 20v-5h-5"/></svg><span>Sync</span></div>
 </nav>

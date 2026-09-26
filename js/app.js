@@ -46,10 +46,52 @@ function przelaczTab(nazwa) {
   if (nazwa === "mapa") setTimeout(satInit, 60);
   if (nazwa === "wykaz") rysujWykaz();
   if (nazwa === "sync") rysujSync();
+  if (nazwa === "wsie") rysujPulpitWsi();
+}
+
+/* ---------- pulpit wsi ---------- */
+let aktywnaWies = localStorage.getItem("aktywnaWies") || "";
+async function rysujPulpitWsi() {
+  const wsie = await DB.wpisyWsie();
+  const wszystkie = await DB.wpisyAll();
+  const box = $("#wies-grid");
+  const karty = wsie.map(w => {
+    const ile = wszystkie.filter(x => x.wies === w).length;
+    const wyslane = wszystkie.filter(x => x.wies === w && x.status === "wyslany").length;
+    return `<div class="wies-card" data-wies="${w}">
+      <div class="wc-gora"><span class="wc-ikona">🌲</span><span class="wc-ile">${ile}</span></div>
+      <b>${w}</b>
+      <small>${wyslane === ile ? "wszystko wysłane ✓" : "do wysłania: " + (ile - wyslane)}</small>
+    </div>`;
+  }).join("");
+  box.innerHTML = (wsie.length ? karty : '<div class="pulpit-info" style="text-align:center;margin-top:24vh">— jeszcze nic nie zebrane —</div>') +
+    `<div class="wies-card wies-nowa" id="wies-nowa">
+      <div class="wc-gora"><span class="wc-ikona">＋</span></div>
+      <b>Nowa wieś</b><small>nazwę wpiszesz przy pierwszym opisie</small>
+    </div>`;
+  box.querySelectorAll(".wies-card[data-wies]").forEach(k =>
+    k.addEventListener("click", () => przejdzDoWsi(k.dataset.wies)));
+  const n = $("#wies-nowa");
+  if (n) n.addEventListener("click", () => {
+    aktywnaWies = ""; localStorage.removeItem("aktywnaWies");
+    trybEdycji = null; stan = nowyStan(); uzupelnijForm(); rysuj(); przelaczTab("form");
+  });
+  odswiezAppbar();
+}
+function przejdzDoWsi(w) {
+  aktywnaWies = w; localStorage.setItem("aktywnaWies", w);
+  trybEdycji = null; stan = nowyStan(); stan.wies = w || "";
+  uzupelnijForm(); rysuj();
+  przelaczTab("wykaz");
 }
 
 /* ---------- kreator startowy ---------- */
 let onbKrok = 0;
+/* na telefonie (Android/iOS — w tym w Brave) File System Access nie działa
+   w karcie aplikacji — od razu pokazujemy tryb pobierania plików */
+const MOBILNY = /Android|iPhone|iPad/i.test(navigator.userAgent);
+const FOLDER_MOZLIWY = !!window.showDirectoryPicker && !MOBILNY;
+
 function renderOnb() {
   const kroki = ["Leśnik", "Folder na telefonie", "Chmury"];
   const html = [];
@@ -61,16 +103,16 @@ function renderOnb() {
       <button type="button" class="fab" id="onb-dalej" style="margin-top:10px">Dalej →</button>
       <button type="button" class="fab szary" id="onb-przywroc" style="margin-top:8px">Mam backup — przywróć sesję</button>`);
   } else if (onbKrok === 1) {
-    if (window.showDirectoryPicker) {
+    if (FOLDER_MOZLIWY) {
       html.push(`<h3>Gdzie zapisywać pliki?</h3>
         <p>Wskaż folder na tym urządzeniu — Excel z opisami będzie tam widoczny także dla innych aplikacji.</p>
         <button type="button" class="fab" id="onb-folder">Wybierz folder</button>
         <button type="button" class="fab szary" id="onb-folder-pomin">Pomiń (będę pobierał pliki ręcznie)</button>`);
     } else {
       html.push(`<h3>Gdzie zapisywać pliki?</h3>
-        <p>Twoja przeglądarka nie pozwala wskazać folderu (Firefox, Safari, Samsung Internet).
-        Nie szkodzi — Excel i backup pobierzesz przyciskiem, a sesja i tak zapisuje się
-        automatycznie w pamięci aplikacji oraz na chmurach po wysyłce.</p>
+        <p>Na telefonie i w niektórych przeglądarkach (Firefox, Safari, Brave) nie da się
+        wskazać folderu na stałe. Nie szkodzi — Excel i backup pobierzesz przyciskiem,
+        a sesja i tak zapisuje się automatycznie w pamięci aplikacji oraz na chmurach po wysyłce.</p>
         <button type="button" class="fab" id="onb-folder-pomin">OK — dalej</button>
         <button type="button" class="fab szary" id="onb-przywroc-plik">Mam plik backupu — przywróć</button>`);
     }
@@ -91,7 +133,7 @@ function renderOnb() {
     inp.addEventListener("keydown", e => { if (e.key === "Enter") onbDalej(); });
     $("#onb-dalej").addEventListener("click", onbDalej);
     $("#onb-przywroc").addEventListener("click", async () => {
-      if (!window.showDirectoryPicker) {
+      if (!FOLDER_MOZLIWY) {
         window.__celPrzywrocenia = "onboarding";
         $("#plik-backup").click();
         return;
@@ -149,7 +191,7 @@ async function zakonczOnboarding(doChmur) {
   if (!autor) { onbKrok = 0; renderOnb(); toast("Najpierw podaj imię i nazwisko"); return; }
   $("#onboarding").classList.remove("on");
   odswiezAppbar();
-  przelaczTab(doChmur ? "sync" : "form");
+  przelaczTab(doChmur ? "sync" : "wsie");
 }
 async function pokazDialogFolderu() {
   if (window.showDirectoryPicker) return await window.showDirectoryPicker({ mode: "readwrite" });
@@ -167,7 +209,7 @@ async function odswiezAppbar() {
   k.style.display = kol.doWyslania > 0 ? "inline-block" : "none";
   k.textContent = "kolejka: " + kol.doWyslania;
   const abObr = $("#ab-obreb");
-  if (stan.wies) { abObr.style.display = "inline-block"; abObr.textContent = stan.wies; }
+  if (stan.wies || aktywnaWies) { abObr.style.display = "inline-block"; abObr.textContent = aktywnaWies || stan.wies; }
   else abObr.style.display = "none";
 }
 
@@ -417,7 +459,17 @@ async function rysujWykaz() {
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
   const box = $("#wykaz-lista");
-  if (!wsie.length) {
+  const naglowek = aktywnaWies ? '<span class="powrot-link" id="powrot-wsie">← wszystkie wsie</span>' : "";
+  if (aktywnaWies) {
+    const wpisy = wszystkie.filter(x => x.wies === aktywnaWies);
+    box.innerHTML = naglowek + `<div class="wies-naglowek">${aktywnaWies} · ${wpisy.length}</div>` +
+      wpisy.map(x => `<div class="row-item" data-id="${x.id}">
+        <div class="ri-oddz">${oddzPelne(x)}</div>
+        <div class="ri-main"><b>${OPTAX.jednaLinia(x).slice(0, 60)}</b><small>${x.timestamp.slice(0, 10)} · v${x.wersja || 1}</small></div>
+        ${x.status === "wyslany" ? '<span class="st ok">wysłany</span>' : '<span class="st local">lokalny</span>'}
+        <button class="ri-del" data-del="${x.id}" title="usuń">×</button>
+      </div>`).join("");
+  } else if (!wsie.length) {
     box.innerHTML = '<div class="wies-naglowek" style="text-align:center;margin-top:30vh">— jeszcze nic nie zebrane —</div>';
   } else {
     box.innerHTML = wsie.map(w => {
@@ -434,6 +486,7 @@ async function rysujWykaz() {
   odswiezAppbar();
 }
 $("#wykaz-lista").addEventListener("click", async e => {
+  if (e.target.closest("#powrot-wsie")) { przelaczTab("wsie"); return; }
   const del = e.target.closest("[data-del]");
   if (del) {
     e.stopPropagation();
@@ -454,7 +507,8 @@ $("#wykaz-lista").addEventListener("click", async e => {
     przelaczTab("form");
   }
 });
-$("#btn-nowy").addEventListener("click", () => { trybEdycji = null; stan = nowyStan(); uzupelnijForm(); rysuj(); przelaczTab("form"); });
+$("#btn-nowy").addEventListener("click", () => { trybEdycji = null; stan = nowyStan(); stan.wies = aktywnaWies || ""; uzupelnijForm(); rysuj(); przelaczTab("form"); });
+$("#ab-obreb").addEventListener("click", () => przelaczTab("wsie"));
 
 /* ---------- aktualizacja APK (działa tylko w aplikacji Android) ---------- */
 const APK_WERSJA = new URLSearchParams(location.search).get("apk_wersja") || "";
@@ -522,6 +576,8 @@ async function rysujSync() {
   const dir = await DB.metaGet("folder");
   $("#s-folder").textContent = dir ? dir.name : "nie wybrano";
   $("#btn-folder").textContent = dir ? "Zmień folder" : "Wybierz folder";
+  $("#btn-folder").style.display = FOLDER_MOZLIWY ? "" : "none";
+  if (!FOLDER_MOZLIWY && !dir) $("#s-folder").textContent = "pliki pobierasz przyciskiem Pobierz";
   $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?") +
     (APK_WERSJA ? " · APK " + APK_WERSJA : "");
   const wsie = await DB.wpisyWsie();
@@ -722,6 +778,7 @@ async function start() {
     $("#onboarding").classList.remove("on");
     const ostatniaWies = await DB.metaGet("ostatniaWies");
     if (ostatniaWies) stan.wies = ostatniaWies;
+    przelaczTab("wsie");
   }
   // datalist wsi
   const wsie = await DB.wpisyWsie();
