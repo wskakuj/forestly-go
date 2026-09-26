@@ -1,7 +1,15 @@
+# Buduje ForestlyGO.apk (TWA):
+#  - ręcznie: Actions → Run workflow (wynik w Artifacts),
+#  - po release.py: tag vX.Y.Z → APK ląduje w Release obok paczki zip.
 name: Build APK (Forestly GO)
 
 on:
   workflow_dispatch:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -23,6 +31,14 @@ jobs:
       - name: Odtworzenie keystore z sekretu
         run: echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > android.keystore
 
+      - name: Wersja APK z tagu (np. v1.0.11 -> 1.0.11 / versionCode 1011)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VC=$(echo "$TAG" | tr -d '.')
+          sed -i "s/versionCode .*/versionCode $VC/" app/build.gradle
+          sed -i "s/versionName .*/versionName \"$TAG\"/" app/build.gradle
+
       - name: Budowa APK
         run: |
           chmod +x gradlew
@@ -38,8 +54,16 @@ jobs:
             --out ForestlyGO.apk forestly-go-aligned.apk
           "$BT/apksigner" verify --print-certs ForestlyGO.apk
 
-      - name: Publikacja artefaktu
+      - name: Publikacja artefaktu (do pobrania z przebiegu)
         uses: actions/upload-artifact@v4
         with:
           name: ForestlyGO-APK
           path: twa/ForestlyGO.apk
+
+      - name: Dodanie APK do Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: twa/ForestlyGO.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -453,7 +453,7 @@ async function rysujSync() {
 async function wczytajKonfigChmur() {
   const nc = await DB.metaGet("nextcloud") || {};
   $("#nc-url").value = nc.url || ""; $("#nc-user").value = nc.user || ""; $("#nc-pass").value = nc.pass || "";
-  $("#nc-path").value = nc.sciezka || "";
+  $("#nc-path").value = nc.sciezka || "Dysk QNAP WD/FORESTLY BAZA";
   const pc = await DB.metaGet("pcloud") || {};
   $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
   const gd = await DB.metaGet("gdrive") || {};

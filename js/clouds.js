@@ -27,9 +27,9 @@ const CLOUDS = (() => {
   }
 
   /* ---------- NEXTCLOUD (WebDAV) ---------- */
-  /* sciezka bazowa z konfiguracji (np. "Dysk QNAP WD/FORESTLY BAZA"), domyślnie Taksator */
+  /* sciezka bazowa z konfiguracji, domyślnie "Dysk QNAP WD/FORESTLY BAZA" */
   function segmentySciezki(cfg, autor) {
-    const surowo = (cfg.sciezka || "Taksator").replace(/^[\/\\]+|[\/\\]+$/g, "");
+    const surowo = (cfg.sciezka || "Dysk QNAP WD/FORESTLY BAZA").replace(/^[\/\\]+|[\/\\]+$/g, "");
     const czesci = surowo.split(/[\/\\]+/).filter(Boolean);
     czesci.push(autor);
     return czesci; // np. ["Dysk QNAP WD", "FORESTLY BAZA", "Artur Pi"]
