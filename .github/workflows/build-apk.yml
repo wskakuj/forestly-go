@@ -1,0 +1,45 @@
+name: Build APK (Forestly GO)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: twa
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Akceptacja licencji Android SDK
+        run: yes | sdkmanager --licenses > /dev/null || true
+
+      - name: Odtworzenie keystore z sekretu
+        run: echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > android.keystore
+
+      - name: Budowa APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Wyrównanie i podpisanie APK
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort | tail -1)
+          "$BT/zipalign" -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk forestly-go-aligned.apk
+          "$BT/apksigner" sign --ks android.keystore --ks-key-alias android \
+            --ks-pass pass:${{ secrets.ANDROID_KEYSTORE_PASS }} \
+            --key-pass pass:${{ secrets.ANDROID_KEYSTORE_PASS }} \
+            --out ForestlyGO.apk forestly-go-aligned.apk
+          "$BT/apksigner" verify --print-certs ForestlyGO.apk
+
+      - name: Publikacja artefaktu
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForestlyGO-APK
+          path: twa/ForestlyGO.apk

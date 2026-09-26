@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.wskakuj.forestlygo",
+    "sha256_cert_fingerprints": ["66:AE:D3:D8:A9:B8:61:54:DA:95:F0:D0:78:EE:FA:87:E0:29:F4:A6:5F:99:D0:A2:5C:6E:57:24:73:E4:84:69"]
+  }
+}]
