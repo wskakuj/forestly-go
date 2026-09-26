@@ -1,4 +1,4 @@
-# Co nowego w Forestly GO v1.0.14
+# Co nowego w Forestly GO v1.0.15
 
-* new theme
+* online release
 

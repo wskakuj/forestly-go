@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Forestly Release — wydawanie z telefonu</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0b0f14; --panel: #141a22; --panel2: #10161f; --wew: #0e141b;
+    --ink: #eef2f6; --dim: #aeb9c6; --line: rgba(255,255,255,.08); --line2: rgba(255,255,255,.14);
+    --accent: #2dd4a7; --accent2: #38bdf8; --red: #fb7185; --orange: #fbbf24;
+    --grad: linear-gradient(135deg, #2dd4a7 0%, #22b8cf 55%, #38a3f8 100%);
+    --mono: "SF Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  html, body { height: 100%; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink);
+    background-image:
+      radial-gradient(1000px 600px at 85% -10%, rgba(45,212,167,.08), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(56,163,248,.07), transparent 60%);
+    display: flex; flex-direction: column; min-height: 100vh; }
+  header { padding: 16px; border-bottom: 1px solid var(--line); background: rgba(16,21,29,.92);
+    position: sticky; top: 0; z-index: 5; }
+  header b { font-size: 17px; } header small { display: block; color: var(--dim); font: 500 11.5px var(--mono); margin-top: 3px; }
+  main { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 16px 14px 28px; }
+  .karta { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 15px 15px 17px; margin-bottom: 14px; }
+  .karta h2 { font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .krok { font: 700 11px var(--mono); color: #07231a; background: var(--grad);
+    border-radius: 999px; padding: 4px 9px; flex: none; }
+  label { display: block; font: 600 10.5px var(--mono); color: var(--dim); letter-spacing: .07em;
+    text-transform: uppercase; margin: 10px 0 6px; }
+  input[type=text], input[type=password], textarea, select {
+    width: 100%; border: 1.5px solid var(--line2); border-radius: 10px; padding: 11px 12px;
+    font-size: 14px; background: var(--wew); color: var(--ink); outline: none; font-family: inherit; }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { min-height: 90px; resize: vertical; line-height: 1.5; }
+  .btn { border: 0; border-radius: 12px; padding: 13px; font: 700 14px inherit; cursor: pointer;
+    width: 100%; margin-top: 12px; background: var(--grad); color: #07231a;
+    display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn:active { transform: scale(.985); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn.maly { width: auto; padding: 9px 14px; margin-top: 0; font-size: 12.5px; }
+  .btn.szary { background: var(--panel2); color: var(--dim); border: 1px solid var(--line); }
+  .rzad { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .rzad > div { flex: 1; min-width: 120px; }
+  .info { font-size: 12.5px; color: var(--dim); line-height: 1.55; margin-top: 8px; }
+  .ok { color: var(--accent); } .zle { color: var(--red); }
+  .pliki { font: 500 11.5px var(--mono); color: var(--dim); background: var(--wew); border-radius: 8px;
+    padding: 10px; margin-top: 10px; max-height: 130px; overflow-y: auto; line-height: 1.7; word-break: break-all; }
+  #log { font: 11.5px var(--mono); background: var(--wew); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px; max-height: 240px; overflow-y: auto; line-height: 1.75; display: none; }
+  #log div { word-break: break-word; }
+  .blad { color: var(--red); } .gora { color: var(--accent); font-weight: 700; }
+  .pasek { height: 6px; background: var(--wew); border-radius: 3px; margin-top: 10px; overflow: hidden; display: none; }
+  .pasek i { display: block; height: 100%; background: var(--grad); width: 0; transition: width .2s; }
+  .podsumowanie { background: var(--wew); border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 12px; margin-top: 12px; font-size: 13px; line-height: 1.8; }
+  .podsumowanie b { font-family: var(--mono); color: var(--accent); }
+  a { color: var(--accent2); }
+  details { margin-top: 10px; } summary { color: var(--dim); font-size: 12.5px; cursor: pointer; }
+  details p { font-size: 12px; color: var(--dim); line-height: 1.6; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <b>🌲 Forestly Release</b>
+  <small>wydawanie wersji prosto z telefonu — jak release.py na komputerze</small>
+</header>
+<main>
+
+  <div class="karta">
+    <h2><span class="krok">1</span> Repozytorium i dostęp</h2>
+    <label>Repozytorium</label>
+    <select id="repo">
+      <option value="go">Forestly GO (strona + APK)</option>
+      <option value="forestly">FORESTLY (kombajn Windows)</option>
+    </select>
+    <label>Token GitHub (fine-grained, uprawnienia Contents + Workflows)</label>
+    <input type="password" id="token" placeholder="github_pat_… lub ghp_…" autocomplete="off">
+    <div class="rzad" style="margin-top:12px">
+      <div></div>
+      <button class="btn maly szary" id="btn-zapisz-token">Zapisz i sprawdź</button>
+      <button class="btn maly szary" id="btn-usun-token">Usuń token</button>
+    </div>
+    <div class="info" id="token-status">Token trzyma się tylko tego telefonu (pamięć przeglądarki) — nigdzie indziej nie wychodzi. Jak go stworzyć — patrz niżej.</div>
+    <details>
+      <summary>Jak stworzyć token (raz, 2 minuty)</summary>
+      <p>GitHub → menu awatara (prawy górny róg) → <b>Settings</b> → na dole <b>Developer settings</b> →
+      <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>.<br><br>
+      Nazwa: <i>forestly-release</i> · Resource owner: <b>wskakuj</b> ·
+      Repository access: <b>Only select repositories</b> → zaznacz <b>forestly-go</b>
+      (i <b>FORESTLY</b>, jeśli chcesz wydawać też kombajna).<br><br>
+      Permissions → Repository permissions: <b>Contents: Read and write</b>,
+      <b>Workflows: Read and write</b>. Na dole <b>Generate token</b> → skopiuj i wklej tutaj.</p>
+    </details>
+  </div>
+
+  <div class="karta">
+    <h2><span class="krok">2</span> Paczka z plikami (zip)</h2>
+    <input type="file" id="zip" accept=".zip" style="font-size:13px;color:var(--dim)">
+    <div class="info" id="zip-status">Wskaż plik zip, który dostałeś (np. forestly-go-motyw.zip).
+      Rozpakuje się do głównego katalogu repo — dokładnie jak „Zamień pliki" na komputerze.</div>
+    <div class="pliki" id="zip-lista" style="display:none"></div>
+  </div>
+
+  <div class="karta">
+    <h2><span class="krok">3</span> Wersja i notatka</h2>
+    <div class="rzad">
+      <div>
+        <label>Nowa wersja</label>
+        <input type="text" id="wersja" placeholder="v1.0.15" autocomplete="off">
+      </div>
+      <div>
+        <label>Ostatni tag</label>
+        <input type="text" id="ostatni" value="—" disabled>
+      </div>
+    </div>
+    <label>Notatka do wydania (trafia do Release na GitHubie)</label>
+    <textarea id="notatka" placeholder="co nowego w tej wersji…"></textarea>
+  </div>
+
+  <button class="btn" id="btn-wyslij" disabled>🚀 Wyślij release</button>
+  <div class="pasek" id="pasek"><i></i></div>
+  <div id="log"></div>
+  <div class="info" id="wynik" style="margin-top:14px"></div>
+
+</main>
+<script src="vendor/jszip.min.js"></script>
+<script>
+"use strict";
+
+const API = "https://api.github.com";
+const REPO = {
+  go: {
+    wlasciciel: "wskakuj", repo: "forestly-go", plikWersji: "js/wersja.js",
+    szablonWersji: v =>
+      "/* Wersja aplikacji — podmienia release.py przy każdym wydaniu.\n" +
+      "   Wyświetlana w zakładce Sync (karta Urządzenie). */\n" +
+      'const WERSJA_APLIKACJI = "v' + v + '";\n'
+  },
+  forestly: {
+    wlasciciel: "wskakuj", repo: "FORESTLY", plikWersji: "app/config.py",
+    szablonWersji: null /* podmiana CURRENT_VERSION w bieżącym pliku */
+  }
+};
+let token = localStorage.getItem("fr_token") || "";
+let plikiZip = [];   /* [{sciezka, b64}] */
+
+const $ = s => document.querySelector(s);
+const esc = t => { const d = document.createElement("div"); d.textContent = t; return d.innerHTML; };
+
+function log(t, klasa) {
+  const l = $("#log");
+  l.style.display = "block";
+  const w = document.createElement("div");
+  if (klasa) w.className = klasa;
+  w.textContent = t;
+  l.appendChild(w);
+  l.scrollTop = l.scrollHeight;
+}
+
+async function gh(metoda, sciezka, cialo) {
+  const r = await fetch(API + sciezka, {
+    method: metoda,
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(cialo ? { "Content-Type": "application/json" } : {})
+    },
+    ...(cialo ? { body: JSON.stringify(cialo) } : {})
+  });
+  const dane = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error("GitHub HTTP " + r.status + ": " + (dane.message || "?"));
+  return dane;
+}
+
+function aktualnyRepoId() { return $("#repo").value; }
+function sciezkaApi() { const r = REPO[aktualnyRepoId()]; return "/repos/" + r.wlasciciel + "/" + r.repo; }
+
+/* ---------- base64 (tekst i binaria) ---------- */
+function b64ZBufora(buf) {
+  const u8 = new Uint8Array(buf); let s = "";
+  for (let i = 0; i < u8.length; i += 0x8000)
+    s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+const b64Tekstu = t => b64ZBufora(new TextEncoder().encode(t));
+
+/* ---------- wersja z tagów ---------- */
+function porownajWersje(a, b) {
+  const A = String(a).replace(/^v/, "").split(".").map(Number);
+  const B = String(b).replace(/^v/, "").split(".").map(Number);
+  for (let i = 0; i < Math.max(A.length, B.length); i++) {
+    const d = (A[i] || 0) - (B[i] || 0);
+    if (d) return d > 0 ? 1 : -1;
+  }
+  return 0;
+}
+async function sugerujWersje() {
+  const tagi = await gh("GET", sciezkaApi() + "/tags?per_page=100");
+  const wersje = tagi.map(t => (t.name || "").match(/^v?(\d+\.\d+\.\d+)$/)).filter(Boolean).map(m => m[1]);
+  const ostatni = wersje.sort(porownajWersje).pop();
+  $("#ostatni").value = ostatni ? "v" + ostatni : "brak";
+  if (ostatni) {
+    const c = ostatni.split(".");
+    $("#wersja").value = "v" + c[0] + "." + c[1] + "." + (+c[2] + 1);
+  } else $("#wersja").value = "v1.0.1";
+}
+
+/* ---------- obsługa ---------- */
+$("#btn-zapisz-token").addEventListener("click", async () => {
+  token = $("#token").value.trim();
+  if (!token) { $("#token-status").textContent = "Wklej token najpierw."; return; }
+  $("#token-status").textContent = "Sprawdzam…";
+  try {
+    const ja = await gh("GET", "/user");
+    const repoInfo = await gh("GET", sciezkaApi());
+    localStorage.setItem("fr_token", token);
+    $("#token-status").innerHTML = "✓ Zalogowany jako <b>" + esc(ja.login) + "</b> — repo <b>" +
+      esc(repoInfo.full_name) + "</b> dostępne. Token zapisany na tym telefonie.";
+    odswiezGotowosc();
+  } catch (e) {
+    localStorage.removeItem("fr_token");
+    $("#token-status").innerHTML = "<span class='zle'>✗ " + esc(e.message) + "</span>";
+  }
+});
+$("#btn-usun-token").addEventListener("click", () => {
+  token = ""; localStorage.removeItem("fr_token"); $("#token").value = "";
+  $("#token-status").textContent = "Token usunięty z telefonu.";
+  odswiezGotowosc();
+});
+$("#repo").addEventListener("change", async () => {
+  plikiZip = []; $("#zip-lista").style.display = "none"; $("#zip-status").textContent = "Wskaż plik zip…";
+  $("#zip").value = ""; odswiezGotowosc();
+  if (token) { try { await sugerujWersje(); } catch (e) { log("Nie mogę pobrać tagów: " + e.message, "blad"); } }
+});
+
+$("#zip").addEventListener("change", async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  plikiZip = [];
+  try {
+    const zip = await JSZip.loadAsync(f);
+    const wpis = [];
+    zip.forEach((sciezka, entry) => {
+      if (entry.dir) return;
+      if (sciezka.startsWith("__MACOSX/") || sciezka.includes("/__MACOSX/") ||
+          sciezka.endsWith("/.DS_Store") || sciezka === ".DS_Store") return;
+      wpis.push({ sciezka: sciezka.replace(/^\/+/, ""), entry });
+    });
+    /* pliki wersji i notatek generujemy sami — z paczki pomijamy */
+    const gen = [REPO[aktualnyRepoId()].plikWersji, "RELEASE_NOTES.md"];
+    let pokaz = "";
+    for (const w of wpis) {
+      if (gen.includes(w.sciezka)) { pokaz += "↷ " + w.sciezka + " (wygeneruje się na nowo)\n"; continue; }
+      const buf = await w.entry.async("arraybuffer");
+      plikiZip.push({ sciezka: w.sciezka, b64: b64ZBufora(buf) });
+      pokaz += w.sciezka + "\n";
+    }
+    $("#zip-lista").style.display = "block";
+    $("#zip-lista").textContent = pokaz;
+    $("#zip-status").innerHTML = "✓ Paczka rozpakowana: <b>" + plikiZip.length + "</b> plików do wysłania.";
+    odswiezGotowosc();
+  } catch (e) {
+    $("#zip-status").innerHTML = "<span class='zle'>✗ To nie jest poprawny zip: " + esc(e.message) + "</span>";
+  }
+});
+
+function odswiezGotowosc() {
+  $("#btn-wyslij").disabled = !(token && plikiZip.length);
+}
+
+/* ---------- wysyłka ---------- */
+$("#btn-wyslij").addEventListener("click", async () => {
+  const r = REPO[aktualnyRepoId()];
+  const wersja = $("#wersja").value.trim();
+  const m = wersja.match(/^v?(\d+\.\d+\.\d+)$/);
+  if (!m) { log("Wersja musi mieć format vX.Y.Z, np. v1.0.15", "blad"); return; }
+  const czysta = m[1], tag = "v" + czysta;
+  const ile = plikiZip.length;
+  if (!confirm("Wysłać release " + tag + " do " + r.wlasciciel + "/" + r.repo + "?\n\n" +
+      ile + " plików z paczki + " + r.plikWersji + " + RELEASE_NOTES.md\n" +
+      "Po wysłaniu GitHub Actions zbudują release (GO: zip + APK; FORESTLY: exe).")) return;
+
+  const btn = $("#btn-wyslij");
+  btn.disabled = true;
+  const pasek = $("#pasek"), wyp = pasek.querySelector("i");
+  pasek.style.display = "block";
+  $("#wynik").textContent = "";
+  const krokPaska = n => wyp.style.width = Math.round(100 * n) + "%";
+
+  try {
+    log("== Release " + tag + " → " + r.wlasciciel + "/" + r.repo + " ==", "gora");
+
+    /* 1. aktualny stan gałęzi main */
+    log("Pobieram stan gałęzi main…");
+    const ref = await gh("GET", sciezkaApi() + "/git/ref/heads/main");
+    const headSha = ref.object.sha;
+    const commitInfo = await gh("GET", sciezkaApi() + "/git/commits/" + headSha);
+    const drzewoBazowe = commitInfo.tree.sha;
+    log("HEAD: " + headSha.slice(0, 8));
+
+    /* 2. zawartość pliku wersji (FORESTLY podmienia w miejscu) */
+    let wersjaPlik;
+    if (r.szablonWersji) wersjaPlik = b64Tekstu(r.szablonWersji(czysta));
+    else {
+      const cur = await gh("GET", sciezkaApi() + "/contents/" + r.plikWersji);
+      const tekst = atob(cur.content.replace(/\n/g, ""));
+      const mm = tekst.match(/CURRENT_VERSION = "(v?)([\d.]+)"/);
+      if (!mm) throw new Error("Nie znalazłem CURRENT_VERSION w " + r.plikWersji);
+      const nowy = tekst.replace(/CURRENT_VERSION = "[^"]*"/, 'CURRENT_VERSION = "' + mm[1] + czysta + '"');
+      wersjaPlik = b64Tekstu(nowy);
+    }
+
+    /* 3. notatka wydania */
+    const notatka = $("#notatka").value.trim() || "Wydanie " + tag + ".";
+    const notes = "# " + tag + "\n\n" + notatka + "\n\n---\n*wydane z telefonu — Forestly Release*\n";
+
+    /* 4. bloby */
+    const tree = [];
+    const wszystkie = [{ sciezka: r.plikWersji, b64: wersjaPlik },
+                       { sciezka: "RELEASE_NOTES.md", b64: b64Tekstu(notes) }]
+                       .concat(plikiZip);
+    let i = 0;
+    for (const p of wszystkie) {
+      const blob = await gh("POST", sciezkaApi() + "/git/blobs", { content: p.b64, encoding: "base64" });
+      tree.push({ path: p.sciezka, mode: "100644", type: "blob", sha: blob.sha });
+      i++;
+      log("[" + i + "/" + wszystkie.length + "] " + p.sciezka);
+      krokPaska(i / wszystkie.length * 0.8);
+      await new Promise(ok => setTimeout(ok, 60)); /* łagodnie dla API */
+    }
+
+    /* 5. drzewo + commit */
+    log("Tworzę commit…");
+    const noweDrzewo = await gh("POST", sciezkaApi() + "/git/trees",
+      { base_tree: drzewoBazowe, tree: tree });
+    const commit = await gh("POST", sciezkaApi() + "/git/commits", {
+      message: "release " + tag + " — " + notatka.split("\n")[0].slice(0, 60),
+      tree: noweDrzewo.sha, parents: [headSha] });
+    krokPaska(0.9);
+
+    /* 6. przesunięcie gałęzi main */
+    log("Aktualizuję main…");
+    await gh("PATCH", sciezkaApi() + "/git/refs/heads/main", { sha: commit.sha, force: false });
+    krokPaska(0.95);
+
+    /* 7. tag → Actions robią resztę */
+    log("Taguję " + tag + "…");
+    await gh("POST", sciezkaApi() + "/git/refs", { ref: "refs/tags/" + tag, sha: commit.sha });
+    krokPaska(1);
+
+    log("GOTOWE ✓ — Actions budują release.", "gora");
+    $("#wynik").innerHTML =
+      "<div class='podsumowanie'>Release <b>" + esc(tag) + "</b> wysłany ✓ (" + wszystkie.length + " plików)<br>" +
+      "Za 3–6 minut: <a href='https://github.com/" + r.wlasciciel + "/" + r.repo + "/releases'>releases</a> · " +
+      "<a href='https://github.com/" + r.wlasciciel + "/" + r.repo + "/actions'>actions</a><br><br>" +
+      "<span class='info'>Telefony z aplikacją Forestly GO same zaproponują aktualizację ( zielony baner ).</span></div>";
+  } catch (e) {
+    log("BŁĄD: " + e.message, "blad");
+    $("#wynik").innerHTML = "<span class='zle'>Nie udało się — nic straconego, można spróbować jeszcze raz. Sprawdź log powyżej.</span>";
+    if (/HTTP 40[139]/.test(e.message)) log("Podpowiedź: token stracił ważność albo nie ma uprawnień Contents/Workflows do tego repo.", "blad");
+    if (/HTTP 422/.test(e.message)) log("Podpowiedź: taki tag już istnieje — podbij wersję ręcznie w polu powyżej.", "blad");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------- start ---------- */
+(async function init() {
+  if (token) { $("#token").value = token; $("#token-status").textContent = 'Token jest zapisany — kliknij „Zapisz i sprawdź”, aby zweryfikować.'; }
+  try { if (token) await sugerujWersje(); } catch (e) { /* bez tokenu — pole puste */ }
+})();
+</script>
+</body>
+</html>
