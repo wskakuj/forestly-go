@@ -3,6 +3,15 @@
 Aplikacja do wpisywania opisów taksacyjnych w terenie (telefon / tablet, działa offline),
 z wysyłką plików Excel na chmury użytkownika i importem do OPTAX w Forestly.
 
+## Jakiej przeglądarki używać
+
+- **Chrome / Edge (komputer i Android)** — pełne możliwości, łącznie z wyborem folderu
+  na urządzeniu. Na Androidzie wymagany Chrome 132+ (styczeń 2025).
+- **Firefox, Safari, Samsung Internet** — wszystko działa, tylko folderu nie da się
+  wskazać: aplikacja sama przechodzi w tryb „plikowy" — Excel i backup pobierasz
+  przyciskiem, sesja zapisuje się automatycznie w pamięci aplikacji (OPFS),
+  a przywracasz ją z pliku JSON po wyczyszczeniu danych przeglądarki.
+
 ## Co jest w środku
 
 - **Kreator startowy**: leśnik → folder na telefonie → chmury (można pominąć);
@@ -112,9 +121,10 @@ bez ekranów zgód Google, bo konto serwisowe ma dostęp tylko do tego jednego f
 - Excel → wybrany folder na telefonie (widoczny dla innych aplikacji) + trzy chmury po wysyłce,
 - najczulszy moment to dzień w lesie przed wysyłką — po synchronizacji dane są w trzech miejscach.
 
-Uwaga jabłkowa: na iOS/Safari nie ma File System Access API — tam folderu nie wskażesz,
-więc backup trzeba pobrać ręcznie (przycisk „Zapisz teraz" → pobieranie pliku).
-Na Androidzie z Chrome — pełna automatyka. To kolejny argument, by leśnikom dawać Androidy.
+Na przeglądarkach bez Folder API (Firefox, Safari, Samsung Internet) aplikacja sama
+przechodzi w tryb „plikowy": sesja zapisuje się dodatkowo w OPFS (pamięć aplikacji,
+przeżywa restarty), a przycisk „Pobierz backup (plik)" zrzuca JSON na dysk —
+przywracasz go przez „Wczytaj z pliku". Na Androidzie z Chrome — pełna automatyka.
 
 ## Testowanie synchronizacji bez ruszania prawdziwych chmur
 

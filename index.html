@@ -200,7 +200,9 @@
         Gdy przeglądarka wyczyści swoje dane (np. iPhone po tygodniu), wskazujesz folder raz —
         a wszystkie wpisy wracają na miejsce.</div>
         <div class="s-akcje"><button type="button" class="loc-btn" id="btn-backup-teraz">Zapisz teraz</button>
-        <button type="button" class="loc-btn" id="btn-backup-przywroc">Przywróć z folderu</button></div>
+        <button type="button" class="loc-btn" id="btn-backup-przywroc">Przywróć z folderu</button>
+        <button type="button" class="loc-btn" id="btn-backup-plik" style="display:none">Pobierz backup (plik)</button>
+        <button type="button" class="loc-btn" id="btn-wczytaj-plik">Wczytaj z pliku</button></div>
       </div>
 
       <div class="s-karta">
@@ -275,6 +277,7 @@
 <!-- ======================= TOAST ======================= -->
 <div id="toast" class="toast"></div>
 
+<input type="file" id="plik-backup" accept=".json,application/json" hidden>
 <pre id="testout" style="display:none"></pre>
 
 <script src="vendor/xlsx.full.min.js"></script>

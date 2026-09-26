@@ -54,12 +54,22 @@ function renderOnb() {
     html.push(`<h3>Kto zbiera dane?</h3>
       <p>Imię i nazwisko staje się nazwą folderu na serwerze i podpisuje każdy wpis.</p>
       <input class="f-input" id="onb-autor" placeholder="np. Mietek Kowalski" autocomplete="name">
-      <button type="button" class="fab szary" id="onb-przywroc" style="margin-top:10px">Mam backup — przywróć sesję z folderu</button>`);
+      <button type="button" class="fab" id="onb-dalej" style="margin-top:10px">Dalej →</button>
+      <button type="button" class="fab szary" id="onb-przywroc" style="margin-top:8px">Mam backup — przywróć sesję</button>`);
   } else if (onbKrok === 1) {
-    html.push(`<h3>Gdzie zapisywać pliki?</h3>
-      <p>Wskaż folder na tym urządzeniu — Excel z opisami będzie tam widoczny także dla innych aplikacji.</p>
-      <button type="button" class="fab" id="onb-folder">Wybierz folder</button>
-      <button type="button" class="fab szary" id="onb-folder-pomin">Pomiń (będę pobierał pliki ręcznie)</button>`);
+    if (window.showDirectoryPicker) {
+      html.push(`<h3>Gdzie zapisywać pliki?</h3>
+        <p>Wskaż folder na tym urządzeniu — Excel z opisami będzie tam widoczny także dla innych aplikacji.</p>
+        <button type="button" class="fab" id="onb-folder">Wybierz folder</button>
+        <button type="button" class="fab szary" id="onb-folder-pomin">Pomiń (będę pobierał pliki ręcznie)</button>`);
+    } else {
+      html.push(`<h3>Gdzie zapisywać pliki?</h3>
+        <p>Twoja przeglądarka nie pozwala wskazać folderu (Firefox, Safari, Samsung Internet).
+        Nie szkodzi — Excel i backup pobierzesz przyciskiem, a sesja i tak zapisuje się
+        automatycznie w pamięci aplikacji oraz na chmurach po wysyłce.</p>
+        <button type="button" class="fab" id="onb-folder-pomin">OK — dalej</button>
+        <button type="button" class="fab szary" id="onb-przywroc-plik">Mam plik backupu — przywróć</button>`);
+    }
   } else {
     html.push(`<h3>Kopia zapasowa w chmurach</h3>
       <p>Główne dane lądują na Twoim Nextcloud (QNAP), a w tej samej chwili kopia na Dysku Google i pCloud.
@@ -75,7 +85,13 @@ function renderOnb() {
     inp.value = "";
     setTimeout(() => inp.focus(), 100);
     inp.addEventListener("keydown", e => { if (e.key === "Enter") onbDalej(); });
+    $("#onb-dalej").addEventListener("click", onbDalej);
     $("#onb-przywroc").addEventListener("click", async () => {
+      if (!window.showDirectoryPicker) {
+        window.__celPrzywrocenia = "onboarding";
+        $("#plik-backup").click();
+        return;
+      }
       try {
         const dir = await pokazDialogFolderu();
         const r = await SESJA.przywroc(dir);
@@ -88,6 +104,12 @@ function renderOnb() {
       } catch (e) { toast("Nie udało się wybrać folderu"); }
     });
   } else if (onbKrok === 1) {
+    const pw = $("#onb-przywroc-plik");
+    if (pw) pw.addEventListener("click", () => {
+      window.__celPrzywrocenia = "onboarding";
+      $("#plik-backup").click();
+    });
+    if (!$("#onb-folder")) { $("#onb-folder-pomin").addEventListener("click", () => { onbKrok = 2; renderOnb(); }); return; }
     $("#onb-folder").addEventListener("click", async () => {
       try {
         const dir = await pokazDialogFolderu();
@@ -438,15 +460,30 @@ $("#btn-gd-test").addEventListener("click", async () => {
   } catch (e) { toast(e.message); CLOUDS.log("Google błąd: " + e.message); }
 });
 async function odswiezBackupKarte() {
-  const dane = await SESJA.odczytaj(await DB.metaGet("folder")).catch(() => null);
+  const dir = await DB.metaGet("folder");
+  let dane = await SESJA.odczytaj(dir).catch(() => null);
+  let zrodlo = dir ? "folder" : "";
+  if (!dane) { dane = await SESJA.odczytajOpfs(); zrodlo = dane ? "pamięć appki" : ""; }
   $("#s-backup").textContent = dane
-    ? String(dane.zapisano || "").slice(0, 16).replace("T", " ") + " · " + (dane.wpisy || []).length + " wpisów"
-    : "brak pliku w folderze";
+    ? String(dane.zapisano || "").slice(0, 16).replace("T", " ") + " · " + (dane.wpisy || []).length + " wpisów · " + zrodlo
+    : (dir ? "brak pliku w folderze" : "brak — zapisz teraz");
 }
 $("#btn-backup-teraz").addEventListener("click", async () => {
   const r = await SESJA.zapiszZLogiem();
   toast(r.ok ? "Backup zapisany ✓ (" + r.ile + " wpisów)" : "Najpierw wybierz folder (Urządzenie)");
   odswiezBackupKarte();
+});
+if (!window.showDirectoryPicker) {
+  $("#btn-backup-plik").style.display = "inline-block";
+  $("#btn-backup-teraz").textContent = "Zapisz teraz (pamięć appki)";
+}
+$("#btn-backup-plik").addEventListener("click", async () => {
+  const ok = await SESJA.pobierz();
+  if (!ok) toast("Najpierw podaj leśnika (kreator)");
+});
+$("#btn-wczytaj-plik").addEventListener("click", () => {
+  window.__celPrzywrocenia = "sync";
+  $("#plik-backup").click();
 });
 $("#btn-backup-przywroc").addEventListener("click", async () => {
   try {
@@ -457,6 +494,22 @@ $("#btn-backup-przywroc").addEventListener("click", async () => {
     toast("Sesja przywrócona: " + r.ile + " wpisów ✓");
     rysujWykaz(); odswiezAppbar();
   } catch (e) { toast("Nie udało się wybrać folderu"); }
+});
+$("#plik-backup").addEventListener("change", async e => {
+  const plik = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!plik) return;
+  const r = await SESJA.przywrocZPliku(plik);
+  if (!r.ok) { toast(r.powod); return; }
+  toast("Sesja przywrócona: " + r.ile + " wpisów ✓");
+  CLOUDS.log("<b>przywrócono sesję</b> z pliku backupu — " + r.ile + " wpisów");
+  if (window.__celPrzywrocenia === "onboarding") {
+    window.__celPrzywrocenia = null;
+    await zakonczOnboarding(false);
+    await odswiezStart();
+  } else {
+    rysujWykaz(); odswiezAppbar();
+  }
 });
 window.addEventListener("pagehide", () => { SESJA.zapisz(); });
 document.addEventListener("visibilitychange", () => { if (document.hidden) SESJA.zapisz(); });
