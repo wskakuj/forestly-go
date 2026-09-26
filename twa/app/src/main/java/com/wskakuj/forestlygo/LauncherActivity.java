@@ -16,17 +16,15 @@
 package com.wskakuj.forestlygo;
 
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
 
-
 public class LauncherActivity
         extends com.google.androidbrowserhelper.trusted.LauncherActivity {
-    
 
-    
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,11 +42,14 @@ public class LauncherActivity
 
     @Override
     protected Uri getLaunchingUrl() {
-        // Get the original launch Url.
+        // Oryginalny adres startowy + wersja APK jako parametr URL — dzięki temu
+        // strona wie, w jakiej wersji opakowania działa, i sama może zaproponować
+        // aktualizację, gdy na GitHubie pojawi się nowszy ForestlyGO.apk.
         Uri uri = super.getLaunchingUrl();
-
-        
-
+        try {
+            String wersja = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            if (wersja != null) uri = uri.buildUpon().appendQueryParameter("apk_wersja", wersja).build();
+        } catch (PackageManager.NameNotFoundException ignored) { }
         return uri;
     }
 }

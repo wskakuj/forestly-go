@@ -428,6 +428,65 @@ $("#wykaz-lista").addEventListener("click", async e => {
 });
 $("#btn-nowy").addEventListener("click", () => { trybEdycji = null; stan = nowyStan(); uzupelnijForm(); rysuj(); przelaczTab("form"); });
 
+/* ---------- aktualizacja APK (działa tylko w aplikacji Android) ---------- */
+const APK_WERSJA = new URLSearchParams(location.search).get("apk_wersja") || "";
+function porownajWersje(a, b) {
+  const A = String(a).split(".").map(Number), B = String(b).split(".").map(Number);
+  for (let i = 0; i < Math.max(A.length, B.length); i++) {
+    const d = (A[i] || 0) - (B[i] || 0);
+    if (d) return d > 0 ? 1 : -1;
+  }
+  return 0;
+}
+function banerAktualizacji(wersja, url) {
+  if (document.getElementById("baner-apk")) return;
+  const el = document.createElement("div");
+  el.id = "baner-apk";
+  el.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#3a5c33;color:#fff;" +
+    "padding:10px 14px;display:flex;gap:12px;align-items:center;justify-content:center;font-size:14px;" +
+    "box-shadow:0 2px 8px rgba(0,0,0,.35)";
+  const t = document.createElement("span");
+  t.textContent = "↻ Nowa wersja aplikacji: " + wersja;
+  const a = document.createElement("a");
+  a.href = url; a.target = "_blank"; a.rel = "noopener";
+  a.textContent = "Pobierz aktualizację";
+  a.style.cssText = "color:#fff;font-weight:700;text-decoration:underline;white-space:nowrap";
+  const x = document.createElement("button");
+  x.textContent = "×"; x.title = "nie teraz";
+  x.style.cssText = "background:none;border:0;color:#fff;font-size:18px;cursor:pointer;padding:0 4px";
+  x.onclick = () => { localStorage.setItem("apk_omin", wersja); el.remove(); };
+  el.append(t, a, x);
+  document.body.appendChild(el);
+}
+async function sprawdzAktualizacjeApk() {
+  if (!APK_WERSJA) return; // zwykła przeglądarka — nic do sprawdzania
+  try {
+    // zapamiętana dostępna wersja pokazuje baner od razu, bez odpytywania API
+    const pamietana = localStorage.getItem("apk_dostepna") || "";
+    if (pamietana && porownajWersje(pamietana, APK_WERSJA) > 0 &&
+        pamietana !== localStorage.getItem("apk_omin")) {
+      const u = localStorage.getItem("apk_url") || "https://github.com/wskakuj/forestly-go/releases/latest";
+      banerAktualizacji(pamietana, u);
+    }
+    // GitHub odpytywany najwyżej raz na 6 h (limit 60 zapytań/h)
+    const teraz = Date.now(), ostatni = +(localStorage.getItem("apk_check") || 0);
+    if (teraz - ostatni < 6 * 60 * 60 * 1000) return;
+    localStorage.setItem("apk_check", String(teraz));
+    const r = await fetch("https://api.github.com/repos/wskakuj/forestly-go/releases/latest");
+    if (!r.ok) return;
+    const rel = await r.json();
+    const najnowsza = (rel.tag_name || "").replace(/^v/, "");
+    if (!najnowsza || porownajWersje(najnowsza, APK_WERSJA) <= 0) {
+      localStorage.removeItem("apk_dostepna"); return;
+    }
+    const apk = (rel.assets || []).find(a => a.name === "ForestlyGO.apk");
+    const url = apk ? apk.browser_download_url : (rel.html_url || "");
+    localStorage.setItem("apk_dostepna", najnowsza);
+    localStorage.setItem("apk_url", url);
+    if (najnowsza !== localStorage.getItem("apk_omin")) banerAktualizacji(najnowsza, url);
+  } catch (e) { /* offline albo limit GitHuba — po cichu */ }
+}
+
 /* ---------- sync ---------- */
 async function rysujSync() {
   const autor = await DB.metaGet("autor");
@@ -435,7 +494,8 @@ async function rysujSync() {
   const dir = await DB.metaGet("folder");
   $("#s-folder").textContent = dir ? dir.name : "nie wybrano";
   $("#btn-folder").textContent = dir ? "Zmień folder" : "Wybierz folder";
-  $("#s-wersja").textContent = typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?";
+  $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?") +
+    (APK_WERSJA ? " · APK " + APK_WERSJA : "");
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
   odswiezBackupKarte();
@@ -639,7 +699,7 @@ async function start() {
   const wsie = await DB.wpisyWsie();
   $("#dl-wsie").innerHTML = wsie.map(w => `<option value="${w}">`).join("");
   bindOnbKeys();
-  odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur();
+  odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur(); sprawdzAktualizacjeApk();
   if ("serviceWorker" in navigator) {
     // przeładuj od razu, gdy NOWA wersja aplikacji przejmuje kontrolę
     // (ale nie przy pierwszej instalacji — wtedy przejmowanie jest normalne)
