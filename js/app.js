@@ -16,9 +16,14 @@ const GRUPY_WIELOKROTNE = new Set(["pjd", "podsz"]);
 let stan = nowyStan();
 let trybEdycji = null; // id wpisu, który edytujemy
 
+function oddzPelne(w) {
+  w = w || stan;
+  if (w.oddz === undefined && w.oddzPelne !== undefined) return w.oddzPelne;
+  return (w.oddz || "") + (w.poddz || "");
+}
 function nowyStan() {
   return {
-    wies: "", oddz: "", pow: "",
+    wies: "", oddz: "", poddz: "", pow: "",
     obreby: "", dzialki: [],
     siedlisko: null, panujacy: null, drugi: null, udzialDrugi: 0,
     wiekPrzec: 90, pjd: [], pjdWiekPrzec: 70,
@@ -227,7 +232,7 @@ function rysuj() {
     : "wybierz gatunki";
   $("#pv-line").textContent = OPTAX.linie(stan).join("\n");
   $("#pv-line").classList.remove("pv-flash"); void $("#pv-line").offsetWidth; $("#pv-line").classList.add("pv-flash");
-  $("#pv-stamp").textContent = stan.oddz || "—";
+  $("#pv-stamp").textContent = oddzPelne() || "—";
   const loc = $("#loc-info");
   loc.textContent = stan.lat != null
     ? stan.lat.toFixed(5) + "° N · " + stan.lon.toFixed(5) + "° E · " + (stan.locZrodlo || "")
@@ -246,6 +251,7 @@ function bindInput(id, klucz, transform) {
 }
 bindInput("#in-wies", "wies");
 bindInput("#in-oddz", "oddz");
+bindInput("#in-poddz", "poddz");
 bindInput("#in-pow", "pow");
 bindInput("#in-obreby", "obreby");
 /* działki: wpisujesz numer, ➜ lub Enter dodaje na listę zwijaną */
@@ -334,6 +340,7 @@ async function zapiszWpis() {
   if (!autor) { toast("Najpierw podaj, kto zbiera dane (kreator)"); return; }
   if (!stan.wies.trim()) { toast("Podaj obręb / wieś — po tym grupuje się plik Excel"); return; }
   if (!stan.oddz.trim()) { toast("Podaj oddział"); return; }
+  if (stan.poddz && !/^\d+$/.test(stan.oddz.trim())) { toast("Oddział ma być numerem (pododdział wpisz w drugim polu)"); return; }
   const wpis = Object.assign({}, stan, {
     id: trybEdycji || ("w" + Date.now() + "-" + Math.random().toString(36).slice(2, 7)),
     autor,
@@ -343,7 +350,7 @@ async function zapiszWpis() {
     poprawionyPoWyslce: undefined
   });
   await DB.wpisyPut(wpis);
-  CLOUDS.log("<b>zapisano wpis</b> " + wpis.oddz + " (" + wpis.wies + ") — " + (trybEdycji ? "poprawka, plik w kolejce" : "lokalny"));
+  CLOUDS.log("<b>zapisano wpis</b> " + oddzPelne(wpis) + " (" + wpis.wies + ") — " + (trybEdycji ? "poprawka, plik w kolejce" : "lokalny"));
   toast(trybEdycji ? "Poprawka zapisana — plik wróci do kolejki wysyłki" : "Wpis zapisany ✓");
   trybEdycji = null;
   SESJA.zapiszZLogiem();
@@ -356,7 +363,13 @@ $("#btn-wyczysc").addEventListener("click", () => { trybEdycji = null; stan = no
 
 function uzupelnijForm() {
   $("#in-wies").value = stan.wies || "";
+  // stare wpisy: rozdziel stary zapis "251f" / "251 / f" na oddz + poddz
+  if (!stan.poddz && stan.oddz) {
+    const m = String(stan.oddz).trim().match(/^(\d+)\s*(?:\/\s*)?(.*)$/);
+    if (m && m[2]) { stan.oddz = m[1]; stan.poddz = m[2]; }
+  }
   $("#in-oddz").value = stan.oddz || "";
+  $("#in-poddz").value = stan.poddz || "";
   $("#in-pow").value = stan.pow || "";
   $("#in-obreby").value = stan.obreby || "";
   if (typeof stan.dzialki === "string")
@@ -383,7 +396,7 @@ async function rysujWykaz() {
       const wpisy = wszystkie.filter(x => x.wies === w);
       return `<div class="wies-naglowek">${w} · ${wpisy.length}</div>` +
         wpisy.map(x => `<div class="row-item" data-id="${x.id}">
-          <div class="ri-oddz">${x.oddz}</div>
+          <div class="ri-oddz">${oddzPelne(x)}</div>
           <div class="ri-main"><b>${OPTAX.jednaLinia(x).slice(0, 60)}</b><small>${x.timestamp.slice(0, 10)} · v${x.wersja || 1}</small></div>
           ${x.status === "wyslany" ? '<span class="st ok">wysłany</span>' : '<span class="st local">lokalny</span>'}
           <button class="ri-del" data-del="${x.id}" title="usuń">×</button>
@@ -604,6 +617,14 @@ async function start() {
   bindOnbKeys();
   odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur();
   if ("serviceWorker" in navigator) {
+    // przeładuj od razu, gdy NOWA wersja aplikacji przejmuje kontrolę
+    // (ale nie przy pierwszej instalacji — wtedy przejmowanie jest normalne)
+    const mialKontrolera = !!navigator.serviceWorker.controller;
+    let przeladowano = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!mialKontrolera || przeladowano) return;
+      przeladowano = true; location.reload();
+    });
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
   $("#in-wies").addEventListener("change", async e => {

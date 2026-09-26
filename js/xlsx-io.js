@@ -8,7 +8,7 @@ const XLSXIO = (() => {
   const KOLUMNY = [
     ["obreb", w => w.wies || ""],
     ["autor", w => w.autor || ""],
-    ["oddz_poddz", w => w.oddz || ""],
+    ["oddz_poddz", w => (w.oddz || "") + (w.poddz || "")],
     ["pow_ha", w => w.pow || ""],
     ["siedlisko", w => w.siedlisko || ""],
     ["sklad", w => OPTAX.sklad(w)],
