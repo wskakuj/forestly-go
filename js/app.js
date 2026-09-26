@@ -453,6 +453,7 @@ async function rysujSync() {
 async function wczytajKonfigChmur() {
   const nc = await DB.metaGet("nextcloud") || {};
   $("#nc-url").value = nc.url || ""; $("#nc-user").value = nc.user || ""; $("#nc-pass").value = nc.pass || "";
+  $("#nc-path").value = nc.sciezka || "";
   const pc = await DB.metaGet("pcloud") || {};
   $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
   const gd = await DB.metaGet("gdrive") || {};
@@ -467,8 +468,10 @@ $("#btn-folder").addEventListener("click", async () => {
   } catch (e) { toast("Nie udało się wybrać folderu"); }
 });
 $("#btn-nc-save").addEventListener("click", async () => {
-  await DB.metaSet("nextcloud", { url: $("#nc-url").value.trim(), user: $("#nc-user").value.trim(), pass: $("#nc-pass").value });
-  toast("Nextcloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Nextcloud");
+  await DB.metaSet("nextcloud", { url: $("#nc-url").value.trim(), user: $("#nc-user").value.trim(),
+    pass: $("#nc-pass").value, sciezka: $("#nc-path").value.trim() });
+  toast("Nextcloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Nextcloud" +
+    ($("#nc-path").value.trim() ? " — folder: " + $("#nc-path").value.trim() : ""));
 });
 $("#btn-pc-save").addEventListener("click", async () => {
   await DB.metaSet("pcloud", { token: $("#pc-token").value.trim(), path: $("#pc-path").value.trim() || "/Taksator" });

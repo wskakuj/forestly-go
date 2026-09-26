@@ -27,18 +27,28 @@ const CLOUDS = (() => {
   }
 
   /* ---------- NEXTCLOUD (WebDAV) ---------- */
+  /* sciezka bazowa z konfiguracji (np. "Dysk QNAP WD/FORESTLY BAZA"), domyślnie Taksator */
+  function segmentySciezki(cfg, autor) {
+    const surowo = (cfg.sciezka || "Taksator").replace(/^[\/\\]+|[\/\\]+$/g, "");
+    const czesci = surowo.split(/[\/\\]+/).filter(Boolean);
+    czesci.push(autor);
+    return czesci; // np. ["Dysk QNAP WD", "FORESTLY BAZA", "Artur Pi"]
+  }
+
   async function nextcloudPut(cfg, nazwa, blob) {
     const autor = await sciezkaAutor();
     const baza = cfg.url.replace(/\/+$/, "") + "/remote.php/dav/files/" + encodeURIComponent(cfg.user);
     const auth = "Basic " + btoa(cfg.user + ":" + cfg.pass);
-    // PUT nie tworzy folderów po drodze — /Taksator/<leśnik>/ zakładamy sami (MKCOL).
+    // PUT nie tworzy folderów po drodze — całą ścieżkę zakładamy sami (MKCOL po kolei).
     // 201 = utworzony, 405 = już istnieje — oba nas cieszą.
-    for (const seg of ["Taksator", "Taksator/" + encodeURIComponent(autor)]) {
-      const r = await fetch(baza + "/" + seg, { method: "MKCOL", headers: { Authorization: auth } });
+    let narosla = "";
+    for (const seg of segmentySciezki(cfg, autor)) {
+      narosla += "/" + encodeURIComponent(seg);
+      const r = await fetch(baza + narosla, { method: "MKCOL", headers: { Authorization: auth } });
       if (r.status !== 201 && r.status !== 405)
         throw new Error("Nextcloud: nie mogę utworzyć folderu " + seg + " (HTTP " + r.status + ")");
     }
-    const url = baza + `/Taksator/${encodeURIComponent(autor)}/${encodeURIComponent(nazwa)}`;
+    const url = baza + narosla + "/" + encodeURIComponent(nazwa);
     const resp = await fetch(url, { method: "PUT", headers: { Authorization: auth }, body: blob });
     if (!resp.ok) throw new Error("Nextcloud: HTTP " + resp.status +
       (resp.status === 401 ? " (zły login/hasło aplikacji)" : resp.status === 404 ? " (folder nie istnieje?)" : ""));
