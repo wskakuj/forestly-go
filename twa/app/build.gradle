@@ -55,7 +55,7 @@ android {
     namespace "com.wskakuj.forestlygo"
     defaultConfig {
         applicationId "com.wskakuj.forestlygo"
-        minSdkVersion 19
+        minSdkVersion 21
         targetSdkVersion 36
         versionCode 8
         versionName "1.0.8"

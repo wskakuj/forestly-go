@@ -1,4 +1,4 @@
-# Co nowego w Forestly GO v1.0.9
+# Co nowego w Forestly GO v1.0.10
 
-* android build
+* fix
 

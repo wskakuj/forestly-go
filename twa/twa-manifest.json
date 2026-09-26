@@ -29,7 +29,7 @@
   "isChromeOSOnly": false,
   "isMetaQuest": false,
   "fullScopeUrl": "https://wskakuj.github.io/forestly-go/",
-  "minSdkVersion": 19,
+  "minSdkVersion": 21,
   "orientation": "default",
   "fingerprints": [],
   "additionalTrustedOrigins": [],
