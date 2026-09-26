@@ -114,6 +114,9 @@
       Repository access: <b>Only select repositories</b> → zaznacz <b>forestly-go</b>.<br><br>
       Permissions → Repository permissions: <b>Contents: Read and write</b>,
       <b>Workflows: Read and write</b>. Na dole <b>Generate token</b> → skopiuj i wklej tutaj.</p>
+      <p><b>Jeśli token już masz</b> — nie twórz nowego: kliknij go na liście,
+      popraw Repository access (forestly-go) i uprawnienia (Contents + Workflows
+      na Read and write), zapisz — i tu kliknij „Zapisz i sprawdź” jeszcze raz.</p>
     </details>
   </div>
 
@@ -200,17 +203,30 @@ $("#btn-odswiez").addEventListener("click", () => sugerujWersje(false));
 $("#btn-zapisz-token").addEventListener("click", async () => {
   token = $("#token").value.trim();
   if (!token) { $("#token-status").textContent = "Wklej token najpierw."; return; }
-  $("#token-status").textContent = "Sprawdzam…";
+  $("#token-status").textContent = "Sprawdzam… (w tym próbę zapisu)";
   try {
     const ja = await gh("GET", "/user");
     const repoInfo = await gh("GET", sciezkaApi());
+    /* próba zapisu: luźny, nigdzie niepodpięty blob — nie zmienia plików
+       ani gałęzi, ale GitHub odpowie 403, gdy token nie ma Contents:write */
+    await gh("POST", sciezkaApi() + "/git/blobs", { content: "sprawdzenie", encoding: "utf-8" });
     localStorage.setItem("fr_token", token);
     $("#token-status").innerHTML = "✓ Zalogowany jako <b>" + esc(ja.login) + "</b> — repo <b>" +
-      esc(repoInfo.full_name) + "</b> dostępne. Token zapisany na tym telefonie.";
+      esc(repoInfo.full_name) + "</b>: odczyt i <b>zapis działają</b> ✓. Token zapisany na tym telefonie.";
     odswiezGotowosc();
   } catch (e) {
     localStorage.removeItem("fr_token");
-    $("#token-status").innerHTML = "<span class='zle'>✗ " + esc(e.message) + "</span>";
+    let msg = esc(e.message);
+    if (/Resource not accessible/.test(e.message)) {
+      msg = "Token jest prawidłowy, ale <b>nie ma uprawnień do zapisu</b> tego repo.<br><br>" +
+        "Napraw (2 minuty): GitHub → awatar → <b>Settings</b> → <b>Developer settings</b> → " +
+        "<b>Fine-grained tokens</b> → kliknij swój token i sprawdź:<br>" +
+        "1. <b>Repository access</b> = Only select repositories → musi być <b>forestly-go</b><br>" +
+        "2. Permissions → <b>Contents: Read and write</b><br>" +
+        "3. Permissions → <b>Workflows: Read and write</b><br>" +
+        "Po zapisie zmian wróć tutaj i kliknij „Zapisz i sprawdź” ponownie (tokenu nie trzeba wklejać od nowa).";
+    }
+    $("#token-status").innerHTML = "<span class='zle'>✗ " + msg + "</span>";
   }
 });
 $("#btn-usun-token").addEventListener("click", () => {
@@ -339,7 +355,8 @@ $("#btn-wyslij").addEventListener("click", async () => {
   } catch (e) {
     log("BŁĄD: " + e.message, "blad");
     $("#wynik").innerHTML = "<span class='zle'>Nie udało się — nic straconego, można spróbować jeszcze raz. Sprawdź log powyżej.</span>";
-    if (/HTTP 40[139]/.test(e.message)) log("Podpowiedź: token stracił ważność albo nie ma uprawnień Contents/Workflows do repo forestly-go.", "blad");
+    if (/HTTP 403/.test(e.message)) log("Podpowiedź: token nie ma uprawnień do zapisu — GitHub → Settings → Developer settings → Fine-grained tokens → twój token → Repository access: forestly-go + Contents: Read and write + Workflows: Read and write.", "blad");
+    if (/HTTP 401|HTTP 404/.test(e.message)) log("Podpowiedź: token stracił ważność albo wskazuje inne konto/repo.", "blad");
     if (/HTTP 422/.test(e.message)) log("Podpowiedź: taki tag już istnieje — podbij wersję ręcznie w polu powyżej.", "blad");
   } finally {
     btn.disabled = false;

@@ -8,8 +8,6 @@ const XLSXIO = (() => {
   const KOLUMNY = [
     ["obreb", w => w.wies || ""],
     ["autor", w => w.autor || ""],
-    ["oddz_poddz", w => (w.oddz || "") + (w.poddz || "")],
-    ["pow_ha", w => w.pow || ""],
     ["siedlisko", w => w.siedlisko || ""],
     ["sklad", w => OPTAX.sklad(w)],
     ["wiek_min", w => w.wiekPrzec ? w.wiekPrzec - OPTAX.KROK : ""],
@@ -21,7 +19,7 @@ const XLSXIO = (() => {
     ["podszyt", w => (w.podsz || []).join(", ")],
     ["podszyt_proc", w => w.podszProc != null ? w.podszProc : ""],
     ["nr_obrebow", w => w.obreby || ""],
-    ["nr_dzialek", w => Array.isArray(w.dzialki) ? w.dzialki.join(", ") : (w.dzialki || "")],
+    ["nr_wydzielenia", w => Array.isArray(w.dzialki) ? w.dzialki.join(", ") : (w.dzialki || "")],
     ["lat", w => w.lat != null ? w.lat : ""],
     ["lon", w => w.lon != null ? w.lon : ""],
     ["loc_zrodlo", w => w.locZrodlo || ""],
@@ -43,7 +41,8 @@ const XLSXIO = (() => {
     const czysc = s => String(s || "").trim()
       .replace(/[ąćęłńóśźż]/g, c => ({ "ą":"a","ć":"c","ę":"e","ł":"l","ń":"n","ó":"o","ś":"s","ź":"z","ż":"z" }[c]))
       .replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "wpisy";
-    return "Taksator_" + czysc(autor) + "_" + czysc(wies) + ".xlsx";
+    const dzis = new Date().toISOString().slice(0, 10);
+    return czysc(wies) + "_" + dzis + ".xlsx";
   }
 
   async function blobZwpisow(wpisy) {

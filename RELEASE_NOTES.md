@@ -1,4 +1,6 @@
-# Co nowego w Forestly GO v1.0.17
+# v1.0.18
 
-* PWA -> Capacitor
+fixy
 
+---
+*wydane z telefonu — ForestlyGO Release*

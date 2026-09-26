@@ -60,10 +60,9 @@
 
 
       <div class="f-group">
-        <div class="f-label">Numer wydzielenia <span class="sub">wpisz numer i ➜ — pojawi się na liście</span></div>
+        <div class="f-label">Numer wydzielenia <span class="sub">numer dodaje się sam — Enter albo kolejne pole</span></div>
         <div class="tag-input">
-          <input class="f-input" id="in-dzialka" placeholder="np. 10" autocomplete="off">
-          <button type="button" class="tag-add" id="btn-dzialka" title="dodaj działkę">➜</button>
+          <input class="f-input" id="in-dzialka" placeholder="np. 10, 15/2 (Enter)" autocomplete="off">
         </div>
         <div class="chips" id="dzialki-chips"></div>
       </div>
@@ -169,6 +168,7 @@
     <div id="mapa-leaflet"></div>
     <div class="mapa-pasek">
       <button type="button" class="loc-btn" id="btn-gps2">📡 Tu stoję (GPS)</button>
+      <label class="mapa-przel"><input type="checkbox" id="mapa-drogi" checked> drogi i nazwy</label>
       <span class="mapa-info" id="mapa-info">kliknij mapę, aby postawić pinezkę</span>
       <button type="button" class="fab mini" id="btn-pin-do-opisu" disabled>Użyj pinezki w opisie</button>
     </div>
@@ -265,7 +265,6 @@
     </span>
   </div>
   <div class="pv-line" id="pv-line"></div>
-  <div class="pv-note">działki na końcu — jak w pliku OPTAX</div>
 </div>
 
 <!-- ======================= NAWIGACJA ======================= -->

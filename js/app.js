@@ -43,7 +43,7 @@ function toast(msg, ms) {
 function przelaczTab(nazwa) {
   document.querySelectorAll(".bn").forEach(b => b.classList.toggle("on", b.dataset.tab === nazwa));
   document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "pane-" + nazwa));
-  if (nazwa === "mapa") setTimeout(satInit, 60);
+  if (nazwa === "mapa") setTimeout(() => { satInit(); odswiezPinezki(); }, 60);
   if (nazwa === "wykaz") rysujWykaz();
   if (nazwa === "sync") rysujSync();
   if (nazwa === "wsie") rysujPulpitWsi();
@@ -334,13 +334,15 @@ function bindInput(id, klucz, transform) {
   });
 }
 bindInput("#in-wies", "wies");
-/* działki: wpisujesz numer, ➜ lub Enter dodaje na listę zwijaną */
-function dzialkiDodaj() {
+/* działki: numer dodaje się sam (Enter albo przejście do kolejnego pola);
+   można wpisać kilka naraz po przecinku */
+function dzialkiDodaj(trzymajFokus) {
   const inp = $("#in-dzialka");
-  const v = inp.value.replace(/[\s,;]+/g, "");
-  if (!v) return;
-  if (!stan.dzialki.includes(v)) { stan.dzialki.push(v); renderDzialki(); rysuj(); }
-  inp.value = ""; inp.focus();
+  const czesci = inp.value.split(/[,;]+/).map(x => x.replace(/\s+/g, "")).filter(Boolean);
+  for (const v of czesci) if (!stan.dzialki.includes(v)) stan.dzialki.push(v);
+  if (czesci.length) { renderDzialki(); rysuj(); }
+  inp.value = "";
+  if (trzymajFokus) inp.focus();
 }
 function dzialkiUsun(v) {
   stan.dzialki = stan.dzialki.filter(x => x !== v);
@@ -362,8 +364,8 @@ document.addEventListener("click", e => {
   if (usun) { dzialkiUsun(usun.dataset.dzialkaUsun); return; }
   if (e.target.id === "dzialki-more") { dzialkiRozwinięte = !dzialkiRozwinięte; renderDzialki(); }
 });
-$("#btn-dzialka").addEventListener("click", dzialkiDodaj);
-$("#in-dzialka").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); dzialkiDodaj(); } });
+$("#in-dzialka").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); dzialkiDodaj(true); } });
+$("#in-dzialka").addEventListener("blur", () => dzialkiDodaj(false));
 bindInput("#e-wys", "elWys");
 bindInput("#e-pier", "elPier");
 bindInput("#e-bon", "elBon");
@@ -388,7 +390,38 @@ $("#btn-gps2").addEventListener("click", gpsZlapuj);
 $("#btn-mapa").addEventListener("click", () => przelaczTab("mapa"));
 
 /* ---------- mapa ---------- */
-let mapa = null, pinezka = null, satInitDone = false;
+let mapa = null, pinezka = null, satInitDone = false, warstwaDrog = null, warstwaWpisow = null;
+function przelaczDrogi(on) {
+  if (!mapa) return;
+  if (on && !warstwaDrog) {
+    warstwaDrog = L.layerGroup([
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }),
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 })
+    ]).addTo(mapa);
+  } else if (!on && warstwaDrog) { mapa.removeLayer(warstwaDrog); warstwaDrog = null; }
+}
+$("#mapa-drogi").addEventListener("change", e => przelaczDrogi(e.target.checked));
+async function odswiezPinezki() {
+  if (!mapa) return;
+  if (warstwaWpisow) mapa.removeLayer(warstwaWpisow);
+  warstwaWpisow = L.layerGroup().addTo(mapa);
+  const wszystkie = (await DB.wpisyAll()).filter(w => w.lat != null && w.lon != null);
+  for (const w of wszystkie) {
+    const nr = (Array.isArray(w.dzialki) && w.dzialki.length ? w.dzialki.join(", ") : "") || oddzPelne(w) || "—";
+    const tekst = String(nr).replace(/[<>&]/g, zn => ({ "<": "\u003C", ">": "\u003E", "&": "\u0026" }[zn]));
+    const ik = L.divIcon({ className: "pin-wpis",
+      html: '<span class="pin-punkt">📍</span><span class="pin-nr">' + tekst + '</span>',
+      iconSize: [46, 44], iconAnchor: [23, 40] });
+    const m = L.marker([w.lat, w.lon], { icon: ik }).addTo(warstwaWpisow);
+    m.on("click", () => {
+      trybEdycji = w.id;
+      stan = Object.assign(nowyStan(), w);
+      if (!Array.isArray(stan.pjd)) stan.pjd = [];
+      if (!Array.isArray(stan.podsz)) stan.podsz = [];
+      uzupelnijForm(); rysuj(); przelaczTab("form");
+    });
+  }
+}
 function satInit() {
   if (satInitDone || typeof L === "undefined") return;
   const el = $("#mapa-leaflet");
@@ -397,6 +430,8 @@ function satInit() {
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
     maxZoom: 19, attribution: "Esri World Imagery"
   }).addTo(mapa);
+  const cb = document.getElementById("mapa-drogi");
+  if (cb && cb.checked) przelaczDrogi(true);
   mapa.on("click", e => {
     const ikona = L.divIcon({ className: "pin-emoji", html: "📍", iconSize: [30, 30], iconAnchor: [15, 27] });
     if (pinezka) pinezka.setLatLng(e.latlng);
@@ -459,6 +494,11 @@ function uzupelnijForm() {
 }
 
 /* ---------- wykaz ---------- */
+function identyfikatorWpisu(x) {
+  const d = Array.isArray(x.dzialki) ? x.dzialki.join(", ") : (x.dzialki || "");
+  const o = oddzPelne(x);
+  return o && d ? o + " · " + d : (o || d || "—");
+}
 async function rysujWykaz() {
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
@@ -468,7 +508,7 @@ async function rysujWykaz() {
     const wpisy = wszystkie.filter(x => x.wies === aktywnaWies);
     box.innerHTML = naglowek + `<div class="wies-naglowek">${aktywnaWies} · ${wpisy.length}</div>` +
       wpisy.map(x => `<div class="row-item" data-id="${x.id}">
-        <div class="ri-oddz">${oddzPelne(x)}</div>
+        <div class="ri-oddz">${identyfikatorWpisu(x)}</div>
         <div class="ri-main"><b>${OPTAX.jednaLinia(x).slice(0, 60)}</b><small>${x.timestamp.slice(0, 10)} · v${x.wersja || 1}</small></div>
         ${x.status === "wyslany" ? '<span class="st ok">wysłany</span>' : '<span class="st local">lokalny</span>'}
         <button class="ri-del" data-del="${x.id}" title="usuń">×</button>
@@ -480,7 +520,7 @@ async function rysujWykaz() {
       const wpisy = wszystkie.filter(x => x.wies === w);
       return `<div class="wies-naglowek">${w} · ${wpisy.length}</div>` +
         wpisy.map(x => `<div class="row-item" data-id="${x.id}">
-          <div class="ri-oddz">${oddzPelne(x)}</div>
+          <div class="ri-oddz">${identyfikatorWpisu(x)}</div>
           <div class="ri-main"><b>${OPTAX.jednaLinia(x).slice(0, 60)}</b><small>${x.timestamp.slice(0, 10)} · v${x.wersja || 1}</small></div>
           ${x.status === "wyslany" ? '<span class="st ok">wysłany</span>' : '<span class="st local">lokalny</span>'}
           <button class="ri-del" data-del="${x.id}" title="usuń">×</button>

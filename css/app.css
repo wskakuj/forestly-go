@@ -249,3 +249,14 @@ button { font-family: var(--font-body); }
 @supports (padding: env(safe-area-inset-bottom)) {
   .bnav { padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* pinezki zapisanych opisów na mapie (z numerem wydzielenia) */
+.pin-wpis { display: flex; flex-direction: column; align-items: center; }
+.pin-punkt { font-size: 22px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.pin-nr { margin-top: 2px; font: 700 10.5px var(--font-mono); color: #fff; background: rgba(11,15,20,.85);
+  border: 1px solid rgba(45,212,167,.6); border-radius: 7px; padding: 2px 6px; white-space: nowrap;
+  max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+.mapa-przel { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--dim);
+  background: var(--wewnetrzny); border: 1px solid var(--line2); border-radius: 9px; padding: 5px 9px;
+  white-space: nowrap; cursor: pointer; }
+.mapa-przel input { accent-color: #2dd4a7; }
