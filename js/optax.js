@@ -13,9 +13,10 @@ const OPTAX = (() => {
 
   function sklad(w) {
     if (!w.panujacy) return "";
+    const pan = w.udzialPanujacy != null ? w.udzialPanujacy : 10 - (w.udzialDrugi || 0);
     if (w.drugi && w.udzialDrugi > 0)
-      return (10 - w.udzialDrugi) + w.panujacy + ";" + w.udzialDrugi + w.drugi;
-    return "10" + w.panujacy;
+      return pan + w.panujacy + ";" + w.udzialDrugi + w.drugi;
+    return pan + w.panujacy;
   }
 
   /* pełny, wieloliniowy opis — jak w czarnej belce podglądu */

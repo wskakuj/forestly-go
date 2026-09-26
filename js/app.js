@@ -23,9 +23,8 @@ function oddzPelne(w) {
 }
 function nowyStan() {
   return {
-    wies: "", oddz: "", poddz: "", pow: "",
-    obreby: "", dzialki: [],
-    siedlisko: null, panujacy: null, drugi: null, udzialDrugi: 0,
+    wies: "", dzialki: [],
+    siedlisko: null, panujacy: null, drugi: null, udzialPanujacy: 10, udzialDrugi: 0,
     wiekPrzec: 90, pjd: [], pjdWiekPrzec: 70,
     zwarcie: null, podsz: [], podszProc: 50,
     elWys: "", elPier: "", elBon: "", elZad: "", elMiaz: "",
@@ -205,12 +204,52 @@ document.addEventListener("click", e => {
   if (!b) return;
   const krok = parseInt(b.dataset.dir, 10);
   switch (b.dataset.step) {
-    case "udzial": stan.udzialDrugi = Math.min(9, Math.max(0, stan.udzialDrugi + krok)); break;
+    case "udzialpan": stan.udzialPanujacy = Math.min(10, Math.max(0, udzialPan(stan) + krok)); break;
+    case "udzial": stan.udzialDrugi = Math.min(10, Math.max(0, stan.udzialDrugi + krok)); break;
     case "wiek": stan.wiekPrzec = Math.max(10, stan.wiekPrzec + krok); break;
     case "pjdwiek": stan.pjdWiekPrzec = Math.max(10, stan.pjdWiekPrzec + krok); break;
     case "podszproc": stan.podszProc = Math.min(100, Math.max(0, stan.podszProc + krok)); break;
   }
   rysuj();
+});
+
+/* klik w wartość stepperów — ręczne wpisanie liczby */
+const udzialPan = w => (w.udzialPanujacy != null ? w.udzialPanujacy : 10 - (w.udzialDrugi || 0));
+const EDYTOWALNE = {
+  udzialpan: { val: () => udzialPan(stan), set: n => stan.udzialPanujacy = Math.min(10, Math.max(0, n)) },
+  udzial:    { val: () => stan.udzialDrugi, set: n => stan.udzialDrugi = Math.min(10, Math.max(0, n)) },
+  wiek:      { val: () => stan.wiekPrzec, set: n => stan.wiekPrzec = Math.min(300, Math.max(1, n)) },
+  pjdwiek:   { val: () => stan.pjdWiekPrzec, set: n => stan.pjdWiekPrzec = Math.min(300, Math.max(1, n)) },
+  podszproc: { val: () => stan.podszProc, set: n => stan.podszProc = Math.min(100, Math.max(0, n)) }
+};
+document.addEventListener("click", e => {
+  const v = e.target.closest("[data-edit]");
+  if (!v || v.querySelector("input")) return;
+  const tryb = v.dataset.edit, def = EDYTOWALNE[tryb];
+  if (!def) return;
+  const span = v.querySelector("span");
+  const inp = document.createElement("input");
+  inp.type = "text"; inp.inputMode = "numeric";
+  inp.value = def.val();
+  inp.style.cssText = "width:4.5em;font:inherit;padding:1px 4px;border:1px solid #3a5c33;" +
+    "border-radius:6px;background:#fff;color:#1b2b17;text-align:center";
+  v.insertBefore(inp, span);
+  span.style.display = "none";
+  inp.focus(); inp.select();
+  let zakonczono = false;
+  const zakoncz = zapis => {
+    if (zakonczono) return; zakonczono = true;
+    if (zapis) {
+      const n = parseInt(inp.value.replace(/[^0-9]/g, ""), 10);
+      if (!isNaN(n)) def.set(n);
+    }
+    inp.remove(); span.style.display = ""; rysuj();
+  };
+  inp.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") { ev.preventDefault(); zakoncz(true); }
+    else if (ev.key === "Escape") { ev.preventDefault(); zakoncz(false); }
+  });
+  inp.addEventListener("blur", () => zakoncz(true));
 });
 
 /* ---------- podgląd OPTAX ---------- */
@@ -227,9 +266,12 @@ function rysuj() {
   $("#pjd-wiek-linia").textContent = (stan.pjdWiekPrzec - OPTAX.KROK) + "–" + (stan.pjdWiekPrzec + OPTAX.KROK) + " / " + stan.pjdWiekPrzec + " l";
   $("#podsz-proc").textContent = stan.podszProc + "%";
   $("#e-kl").textContent = "kl. " + OPTAX.klasaWieku(stan.wiekPrzec);
-  $("#udzial-linia").textContent = stan.panujacy || stan.drugi
-    ? (10 - stan.udzialDrugi) + " " + (stan.panujacy || "—") + (stan.drugi ? " ; " + stan.udzialDrugi + " " + stan.drugi : "")
-    : "wybierz gatunki";
+  $("#udzial-pan-linia").textContent = stan.panujacy
+    ? udzialPan(stan) + " " + stan.panujacy
+    : "wybierz gatunek";
+  $("#udzial-linia").textContent = stan.drugi
+    ? stan.udzialDrugi + " " + stan.drugi
+    : "—";
   $("#pv-line").textContent = OPTAX.linie(stan).join("\n");
   $("#pv-line").classList.remove("pv-flash"); void $("#pv-line").offsetWidth; $("#pv-line").classList.add("pv-flash");
   $("#pv-stamp").textContent = oddzPelne() || "—";
@@ -250,10 +292,6 @@ function bindInput(id, klucz, transform) {
   });
 }
 bindInput("#in-wies", "wies");
-bindInput("#in-oddz", "oddz");
-bindInput("#in-poddz", "poddz");
-bindInput("#in-pow", "pow");
-bindInput("#in-obreby", "obreby");
 /* działki: wpisujesz numer, ➜ lub Enter dodaje na listę zwijaną */
 function dzialkiDodaj() {
   const inp = $("#in-dzialka");
@@ -359,19 +397,9 @@ async function zapiszWpis() {
   rysujWykaz();
 }
 $("#btn-zapisz").addEventListener("click", zapiszWpis);
-$("#btn-wyczysc").addEventListener("click", () => { trybEdycji = null; stan = nowyStan(); uzupelnijForm(); rysuj(); });
 
 function uzupelnijForm() {
   $("#in-wies").value = stan.wies || "";
-  // stare wpisy: rozdziel stary zapis "251f" / "251 / f" na oddz + poddz
-  if (!stan.poddz && stan.oddz) {
-    const m = String(stan.oddz).trim().match(/^(\d+)\s*(?:\/\s*)?(.*)$/);
-    if (m && m[2]) { stan.oddz = m[1]; stan.poddz = m[2]; }
-  }
-  $("#in-oddz").value = stan.oddz || "";
-  $("#in-poddz").value = stan.poddz || "";
-  $("#in-pow").value = stan.pow || "";
-  $("#in-obreby").value = stan.obreby || "";
   if (typeof stan.dzialki === "string")
     stan.dzialki = stan.dzialki.split(",").map(x => x.replace(/\s+/g, "")).filter(Boolean);
   $("#in-dzialka").value = "";
@@ -513,7 +541,7 @@ async function rysujSync() {
 async function wczytajKonfigChmur() {
   const nc = await DB.metaGet("nextcloud") || {};
   $("#nc-url").value = nc.url || ""; $("#nc-user").value = nc.user || ""; $("#nc-pass").value = nc.pass || "";
-  $("#nc-path").value = nc.sciezka || "Dysk QNAP WD/FORESTLY BAZA";
+  $("#nc-path").value = (nc.sciezka && nc.sciezka !== "Taksator") ? nc.sciezka : "Dysk QNAP WD/FORESTLY BAZA";
   const pc = await DB.metaGet("pcloud") || {};
   $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
   const gd = await DB.metaGet("gdrive") || {};
@@ -745,27 +773,30 @@ if (new URLSearchParams(location.search).get("test")) {
       await onbDalej();
       sprawdz("onboarding krok 1 -> 2", onbKrok === 1);
       // 2. formularz
-      stan.wies = "Lasków"; stan.oddz = "251f"; stan.pow = "3,85";
-      stan.siedlisko = "LMśw"; stan.panujacy = "So"; stan.drugi = "Db"; stan.udzialDrugi = 1;
-      stan.obreby = "5, 8, 14"; stan.dzialki = "5/501, 8/254";
+      stan.wies = "Lasków";
+      stan.siedlisko = "LMśw"; stan.panujacy = "So"; stan.drugi = "Db"; stan.udzialPanujacy = 8; stan.udzialDrugi = 2;
+      stan.dzialki = "5/501, 8/254";
       stan.zwarcie = "umiark."; stan.podsz = ["krusz", "jrz"]; stan.podszProc = 50;
       rysuj();
+      sprawdz("skład z rozprzęgniętymi gatunkami", OPTAX.sklad(stan) === "8So;2Db", OPTAX.sklad(stan));
+      const stary = { panujacy: "So", drugi: "Db", udzialDrugi: 3 };
+      sprawdz("stare wpisy (bez udzialPanujacy) bez zmian", OPTAX.sklad(stary) === "7So;3Db", OPTAX.sklad(stary));
       sprawdz("podglad OPTAX", $("#pv-line").textContent.includes("LMśw") &&
         $("#pv-line").textContent.includes("nr-y.Rej. 5/501"), $("#pv-line").textContent.replace(/\n/g, " / "));
       // 3. zapis wpisu
       await zapiszWpis();
       const po = await DB.wpisyAll();
-      sprawdz("wpis zapisany w IndexedDB", po.length === 1 && po[0].oddz === "251f");
+      sprawdz("wpis zapisany w IndexedDB", po.length === 1 && po[0].wies === "Lasków" && po[0].udzialPanujacy === 8);
       // 4. XLSX
       const blob = await XLSXIO.blobZwpisow(po);
       sprawdz("XLSX zbudowany", blob.size > 3000, blob.size + " B");
       // 5. edycja wpisu (poprawka)
       const zapisany = po[0];
       trybEdycji = zapisany.id;
-      stan = Object.assign(nowyStan(), zapisany); stan.pow = "4,00";
+      stan = Object.assign(nowyStan(), zapisany); stan.udzialDrugi = 3;
       await zapiszWpis();
       const po2 = await DB.wpisyAll();
-      sprawdz("poprawka nadpisuje wpis", po2.length === 1 && po2[0].pow === "4,00");
+      sprawdz("poprawka nadpisuje wpis", po2.length === 1 && po2[0].udzialDrugi === 3);
       // 6. WebDAV mock (serwer na :8123)
       await DB.metaSet("nextcloud", { url: "http://localhost:8123", user: "mietek", pass: "tokensekret" });
       const wynik = await CLOUDS.synchronizujWies(null, "Lasków");

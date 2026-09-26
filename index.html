@@ -48,28 +48,9 @@
         <datalist id="dl-wsie"></datalist>
       </div>
 
-      <div class="f-row3">
-        <div class="f-group">
-          <div class="f-label">Oddz.</div>
-          <input class="f-input" id="in-oddz" placeholder="251" inputmode="numeric" autocomplete="off">
-        </div>
-        <div class="f-group">
-          <div class="f-label">Poddz.</div>
-          <input class="f-input" id="in-poddz" placeholder="f" autocomplete="off">
-        </div>
-        <div class="f-group">
-          <div class="f-label">Pow. [ha]</div>
-          <input class="f-input" id="in-pow" inputmode="decimal" placeholder="3,85" autocomplete="off">
-        </div>
-      </div>
 
       <div class="f-group">
-        <div class="f-label">Numery obrębów <span class="sub">zaznaczone na mapie w terenie</span></div>
-        <input class="f-input" id="in-obreby" placeholder="5, 8, 14, 16, 28, 36" autocomplete="off">
-      </div>
-
-      <div class="f-group">
-        <div class="f-label">Nr-y działek rejestrowych <span class="sub">wpisz numer i ➜ — pojawi się na liście</span></div>
+        <div class="f-label">Numer wydzielenia <span class="sub">wpisz numer i ➜ — pojawi się na liście</span></div>
         <div class="tag-input">
           <input class="f-input" id="in-dzialka" placeholder="np. 5/501" autocomplete="off">
           <button type="button" class="tag-add" id="btn-dzialka" title="dodaj działkę">➜</button>
@@ -85,6 +66,11 @@
       <div class="f-group">
         <div class="f-label">Gatunek panujący</div>
         <div class="chips" data-group="panujacy"></div>
+        <div class="stepper">
+          <button type="button" data-step="udzialpan" data-dir="-1">−</button>
+          <div class="val" data-edit="udzialpan" title="kliknij, aby wpisać ręcznie"><span id="udzial-pan-linia">10 So</span><small>skład warstwy (dziesiątki)</small></div>
+          <button type="button" data-step="udzialpan" data-dir="1">+</button>
+        </div>
       </div>
 
       <div class="f-group">
@@ -92,16 +78,16 @@
         <div class="chips" data-group="drugi"></div>
         <div class="stepper">
           <button type="button" data-step="udzial" data-dir="-1">−</button>
-          <div class="val"><span id="udzial-linia">10 So</span><small>skład warstwy (dziesiątki)</small></div>
+          <div class="val" data-edit="udzial" title="kliknij, aby wpisać ręcznie"><span id="udzial-linia">10 So</span><small>skład warstwy (dziesiątki)</small></div>
           <button type="button" data-step="udzial" data-dir="1">+</button>
         </div>
       </div>
 
       <div class="f-group">
-        <div class="f-label">Wiek warstwy głównej <span class="sub">kręć strzałkami</span></div>
+        <div class="f-label">Wiek warstwy głównej <span class="sub">strzałki albo kliknij wiek</span></div>
         <div class="stepper">
           <button type="button" data-step="wiek" data-dir="-5">−</button>
-          <div class="val"><span id="wiek-linia">85–95 / 90 l</span><small id="wiek-klasa">klasa wieku VI</small></div>
+          <div class="val" data-edit="wiek" title="kliknij, aby wpisać ręcznie"><span id="wiek-linia">85–95 / 90 l</span><small id="wiek-klasa">klasa wieku VI</small></div>
           <button type="button" data-step="wiek" data-dir="5">+</button>
         </div>
       </div>
@@ -111,7 +97,7 @@
         <div class="chips" data-group="pjd"></div>
         <div class="stepper">
           <button type="button" data-step="pjdwiek" data-dir="-5">−</button>
-          <div class="val"><span id="pjd-wiek-linia">65–75 / 70 l</span><small>wiek pjd.</small></div>
+          <div class="val" data-edit="pjdwiek" title="kliknij, aby wpisać ręcznie"><span id="pjd-wiek-linia">65–75 / 70 l</span><small>wiek pjd.</small></div>
           <button type="button" data-step="pjdwiek" data-dir="5">+</button>
         </div>
       </div>
@@ -126,7 +112,7 @@
         <div class="chips" data-group="podsz"></div>
         <div class="stepper">
           <button type="button" data-step="podszproc" data-dir="-10">−</button>
-          <div class="val"><span id="podsz-proc">50%</span><small>pokrycia podszytu</small></div>
+          <div class="val" data-edit="podszproc" title="kliknij, aby wpisać ręcznie"><span id="podsz-proc">50%</span><small>pokrycia podszytu</small></div>
           <button type="button" data-step="podszproc" data-dir="10">+</button>
         </div>
       </div>
@@ -164,7 +150,6 @@
       </div>
 
       <button class="fab" id="btn-zapisz">✓ Zapisz wpis</button>
-      <button class="fab szary" id="btn-wyczysc">Nowy pusty wpis</button>
 
     </div>
   </div>
@@ -269,7 +254,7 @@
     </span>
   </div>
   <div class="pv-line" id="pv-line"></div>
-  <div class="pv-note">obręb i działki na końcu — jak w pliku OPTAX</div>
+  <div class="pv-note">działki na końcu — jak w pliku OPTAX</div>
 </div>
 
 <!-- ======================= NAWIGACJA ======================= -->
