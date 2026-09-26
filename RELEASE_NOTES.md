@@ -1,4 +1,4 @@
-# Co nowego w Forestly GO v1.0.7
+# Co nowego w Forestly GO v1.0.8
 
-* fix
+* update fix
 

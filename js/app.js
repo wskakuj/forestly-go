@@ -459,6 +459,27 @@ async function wczytajKonfigChmur() {
   const gd = await DB.metaGet("gdrive") || {};
   $("#gd-json").value = gd.sa ? JSON.stringify(gd.sa) : "";
 }
+/* instalacja jako aplikacja: Chrome podpowiada, łapiemy i pokazujemy przycisk */
+let odroczonaInstalacja = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  odroczonaInstalacja = e;
+  const btn = document.getElementById("btn-instaluj");
+  if (btn) btn.style.display = "inline-block";
+});
+window.addEventListener("appinstalled", () => {
+  const btn = document.getElementById("btn-instaluj");
+  if (btn) btn.style.display = "none";
+  toast("Forestly GO zainstalowane ✓");
+});
+document.addEventListener("click", async e => {
+  if (e.target.closest("#btn-instaluj") && odroczonaInstalacja) {
+    odroczonaInstalacja.prompt();
+    const w = await odroczonaInstalacja.userChoice;
+    if (w && w.outcome === "accepted") CLOUDS.log("<b>zainstalowano</b> aplikację na urządzeniu");
+    odroczonaInstalacja = null;
+  }
+});
 $("#btn-folder").addEventListener("click", async () => {
   try {
     const dir = await pokazDialogFolderu();
@@ -628,8 +649,12 @@ async function start() {
       if (!mialKontrolera || przeladowano) return;
       przeladowano = true; location.reload();
     });
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});
+    // Chrome sam sprawdza aktualizacje SW najwyżej raz na 24 h —
+    // wymuszamy sprawdzanie przy KAŻDYM otwarciu aplikacji.
+    navigator.serviceWorker.ready.then(r => r.update()).catch(() => {});
   }
+
   $("#in-wies").addEventListener("change", async e => {
     await DB.metaSet("ostatniaWies", e.target.value);
   });
