@@ -1,7 +1,8 @@
-# Buduje ForestlyGO.apk (TWA):
+# Buduje ForestlyGO.apk (NATYWNA aplikacja Capacitor — kod strony wbudowany w APK):
 #  - ręcznie: Actions → Run workflow (wynik w Artifacts),
-#  - po release.py: tag vX.Y.Z → APK ląduje w Release obok paczki zip.
-name: Build APK (Forestly GO)
+#  - po wydaniu (tag vX.Y.Z): APK ląduje w Release obok paczki zip.
+# Ten sam klucz podpisu co poprzednio → instaluje się jako aktualizacja.
+name: Build APK (ForestlyGO natywny)
 
 on:
   workflow_dispatch:
@@ -14,56 +15,68 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: twa
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Akceptacja licencji Android SDK
-        run: yes | sdkmanager --licenses > /dev/null || true
+      - name: Zależności npm (Capacitor + wtyczki)
+        run: npm ci
 
-      - name: Odtworzenie keystore z sekretu
-        run: echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > android.keystore
+      - name: Strona aplikacji do pakietu www
+        run: |
+          rm -rf www
+          mkdir -p www/js www/css www/vendor www/icons
+          cp index.html manifest.webmanifest www/
+          cp js/*.js www/js/
+          cp css/*.css www/css/
+          cp vendor/* www/vendor/ 2>/dev/null || true
+          cp icons/*.png www/icons/ 2>/dev/null || true
+          ls www www/js
 
-      - name: Wersja APK z tagu (np. v1.0.11 -> 1.0.11 / versionCode 1011)
+      - name: Wersja APK z tagu (np. v1.0.16 → 1.0.16 / versionCode 1000016)
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           TAG="${GITHUB_REF_NAME#v}"
-          VC=$(echo "$TAG" | tr -d '.')
-          sed -i "s/versionCode .*/versionCode $VC/" app/build.gradle
-          sed -i "s/versionName .*/versionName \"$TAG\"/" app/build.gradle
+          VC=$(python3 -c "x,y,z=[int(p) for p in '${TAG}'.split('.')]; print(x*1000000+y*1000+z)")
+          sed -i "s/versionCode .*/versionCode $VC/" android/app/build.gradle
+          sed -i "s/versionName .*/versionName \"$TAG\"/" android/app/build.gradle
+          grep -n "version" android/app/build.gradle | head -2
 
-      - name: Budowa APK
+      - name: Odtworzenie keystore z sekretu
+        run: echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > android/app/release.keystore
+
+      - name: Synchronizacja Capacitor (strona → assets APK)
+        run: npx cap sync android
+
+      - name: Budowa i podpisanie APK
+        working-directory: android
+        env:
+          KEYSTORE_FILE: release.keystore
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          KEYSTORE_ALIAS: android
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
-
-      - name: Wyrównanie i podpisanie APK
-        run: |
-          BT=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort | tail -1)
-          "$BT/zipalign" -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk forestly-go-aligned.apk
-          "$BT/apksigner" sign --ks android.keystore --ks-key-alias android \
-            --ks-pass pass:${{ secrets.ANDROID_KEYSTORE_PASS }} \
-            --key-pass pass:${{ secrets.ANDROID_KEYSTORE_PASS }} \
-            --out ForestlyGO.apk forestly-go-aligned.apk
-          "$BT/apksigner" verify --print-certs ForestlyGO.apk
+          cp app/build/outputs/apk/release/app-release.apk ../ForestlyGO.apk
 
       - name: Publikacja artefaktu (do pobrania z przebiegu)
         uses: actions/upload-artifact@v4
         with:
           name: ForestlyGO-APK
-          path: twa/ForestlyGO.apk
+          path: ForestlyGO.apk
 
       - name: Dodanie APK do Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: twa/ForestlyGO.apk
+          files: ForestlyGO.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

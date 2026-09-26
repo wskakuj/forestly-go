@@ -1,4 +1,4 @@
-# Co nowego w Forestly GO v1.0.16
+# Co nowego w Forestly GO v1.0.17
 
-* releaser update
+* PWA -> Capacitor
 

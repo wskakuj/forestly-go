@@ -78,12 +78,8 @@ const SESJA = (() => {
     const dane = await zbudujDane();
     if (!dane.autor) return false;
     const blob = new Blob([JSON.stringify(dane, null, 1)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = PREFIKS + czysc(dane.autor) + ".json";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    return true;
+    const r = await zapiszPlik(PREFIKS + czysc(dane.autor) + ".json", blob);
+    return !!r.ok;
   }
 
   /* przywrócenie z pliku pobranego wcześniej (input type=file) */

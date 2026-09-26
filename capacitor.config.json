@@ -1,0 +1,9 @@
+{
+  "appId": "com.wskakuj.forestlygo",
+  "appName": "ForestlyGO",
+  "webDir": "www",
+  "server": {
+    "hostname": "wskakuj.github.io",
+    "androidScheme": "https"
+  }
+}

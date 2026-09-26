@@ -72,12 +72,8 @@ const XLSXIO = (() => {
         }
       } catch (e) { /* brak gestu / odrzucone — spadamy do pobierania */ }
     }
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = nazwa;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    return { ok: true, folder: false, nazwa };
+    const r = await zapiszPlik(nazwa, blob);
+    return { ok: r.ok, folder: false, tryb: r.tryb, nazwa };
   }
 
   return { KOLUMNY, nazwaPliku, blobZwpisow, zapiszDoFolderu };

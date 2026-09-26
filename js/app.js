@@ -90,7 +90,7 @@ let onbKrok = 0;
 /* na telefonie (Android/iOS — w tym w Brave) File System Access nie działa
    w karcie aplikacji — od razu pokazujemy tryb pobierania plików */
 const MOBILNY = /Android|iPhone|iPad/i.test(navigator.userAgent);
-const FOLDER_MOZLIWY = !!window.showDirectoryPicker && !MOBILNY;
+const FOLDER_MOZLIWY = !!window.showDirectoryPicker && !MOBILNY && !NATYWNIE;
 
 function renderOnb() {
   const kroki = ["Leśnik", "Folder na telefonie", "Chmury"];
@@ -515,7 +515,9 @@ $("#btn-nowy").addEventListener("click", () => { trybEdycji = null; stan = nowyS
 $("#ab-obreb").addEventListener("click", () => przelaczTab("wsie"));
 
 /* ---------- aktualizacja APK (działa tylko w aplikacji Android) ---------- */
-const APK_WERSJA = new URLSearchParams(location.search).get("apk_wersja") || "";
+const APK_WERSJA = NATYWNIE
+  ? String(typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "").replace(/^v/, "")
+  : (new URLSearchParams(location.search).get("apk_wersja") || "");
 function porownajWersje(a, b) {
   const A = String(a).split(".").map(Number), B = String(b).split(".").map(Number);
   for (let i = 0; i < Math.max(A.length, B.length); i++) {
@@ -740,7 +742,11 @@ $("#s-pliki").addEventListener("click", async e => {
     const autor = await DB.metaGet("autor") || "x";
     const wpisy = await DB.wpisyByWies(wies);
     const r = await XLSXIO.zapiszDoFolderu(wies, autor, wpisy);
-    toast(r.folder ? "Zapisano do folderu: " + r.nazwa : "Plik pobrany: " + r.nazwa);
+    toast(r.folder ? "Zapisano do folderu: " + r.nazwa :
+        r.tryb === "dokumenty" ? "Zapisano w Dokumentach: " + r.nazwa :
+        r.tryb === "udostepnij" ? "Plik gotowy — wybierz, gdzie zapisać" :
+        r.tryb === "blad" ? "Nie udało się zapisać: " + (r.powod || "?") :
+        "Plik pobrany: " + r.nazwa);
     CLOUDS.log("<b>zapisano lokalnie</b> " + r.nazwa + (r.folder ? " (folder)" : " (pobieranie)"));
   }
 });
@@ -838,7 +844,7 @@ async function sprawdzAktualizacjeRecznie() {
     CLOUDS.log("<b>dostępna nowa wersja</b> " + najnowsza + " (masz " + moja + ")");
     if (!APK_WERSJA) {
       // przeglądarka / PWA — aktualizuje się sama przez service workera
-      if ("serviceWorker" in navigator) {
+      if ("serviceWorker" in navigator && !NATYWNIE) {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg) await reg.update().catch(() => {});
       }
@@ -850,6 +856,15 @@ async function sprawdzAktualizacjeRecznie() {
       localStorage.setItem("apk_omin", najnowsza); wroc(); return;
     }
     if (!url || !apk) { window.open(rel.html_url || "https://github.com/wskakuj/forestly-go/releases/latest", "_blank"); wroc(); return; }
+    if (NATYWNIE) {
+      // w aplikacji natywnej: systemowa przeglądarka pobiera APK i proponuje instalację
+      localStorage.removeItem("apk_omin");
+      const baner = document.getElementById("baner-apk"); if (baner) baner.remove();
+      CLOUDS.log("otwieram pobieranie " + najnowsza + " w przeglądarce");
+      toast("Pobierz ForestlyGO-" + najnowsza + ".apk i zainstaluj (2 dotknięcia)");
+      window.open(url, "_blank");
+      wroc(); return;
+    }
     if (btn) btn.textContent = "Pobieram " + najnowsza + "…";
     const rr = await fetch(url);
     if (!rr.ok) { toast("Nie udało się pobrać (" + rr.status + ")"); wroc(); return; }
@@ -885,7 +900,7 @@ async function start() {
   await odswiezListeWsi();
   bindOnbKeys();
   odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur(); sprawdzAktualizacjeApk();
-  if ("serviceWorker" in navigator) {
+  if ("serviceWorker" in navigator && !NATYWNIE) {
     // przeładuj od razu, gdy NOWA wersja aplikacji przejmuje kontrolę
     // (ale nie przy pierwszej instalacji — wtedy przejmowanie jest normalne)
     const mialKontrolera = !!navigator.serviceWorker.controller;
