@@ -656,8 +656,7 @@ async function rysujSync() {
   $("#btn-folder").textContent = dir ? "Zmień folder" : "Wybierz folder";
   $("#btn-folder").style.display = FOLDER_MOZLIWY ? "" : "none";
   if (!FOLDER_MOZLIWY && !dir) $("#s-folder").textContent = "pliki pobierasz przyciskiem Pobierz";
-  $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?") +
-    (APK_WERSJA ? " · APK " + APK_WERSJA : "");
+  $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?");
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
   odswiezBackupKarte();
@@ -673,8 +672,7 @@ async function rysujSync() {
     const nazwa = XLSXIO.nazwaPliku(w, autor || "x");
     return `<div class="s-plik">
       <div class="ri-main"><b>${nazwa}</b><small>${ile} wpisów</small></div>
-      <button class="fab mini" data-wyslij-wies="${w}">Wyślij</button>
-      <button class="fab mini szary" data-zapisz-wies="${w}">Na telefon</button>
+      <button class="fab mini" data-zapisz-wszedzie="${w}">Zapisz wszędzie</button>
     </div>`;
   }).join("") : '<div class="s-notka">Brak wpisów — zacznij od zakładki „Nowy opis”.</div>';
   odswiezAppbar();
@@ -869,6 +867,41 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) SESJA
 $("#s-pliki").addEventListener("click", async e => {
   const bw = e.target.closest("[data-wyslij-wies]");
   if (bw) { await wyslijWies(bw.dataset.wyslijWies); return; }
+  const wsz = e.target.closest("[data-zapisz-wszedzie]");
+  if (wsz) {
+    const wies = wsz.dataset.zapiszWszedzie;
+    wsz.disabled = true; wsz.textContent = "…";
+    try {
+      /* kopia na telefonie */
+      const autor = await DB.metaGet("autor") || "x";
+      const wpisy = await DB.wpisyByWies(wies);
+      const r = await XLSXIO.zapiszDoFolderu(wies, autor, wpisy);
+      const lokalnieOk = r.tryb !== "blad";
+      if (lokalnieOk) CLOUDS.log("<b>zapisano lokalnie</b> " + r.nazwa + (r.folder ? " (folder)" : " (pobieranie)"));
+      else CLOUDS.log("⚠ zapis lokalny nieudany: " + (r.powod || "?"));
+      /* chmury — wysylamy tam gdzie skonfigurowane */
+      let chmuryOk = 0, chmuryRazem = 0;
+      try {
+        const sc = await CLOUDS.synchronizujWies(null, wies);
+        chmuryOk = Object.values(sc.raport).filter(v => v === "ok").length;
+        const bledy = Object.entries(sc.raport).filter(([k, v]) => v !== "ok");
+        chmuryRazem = chmuryOk + bledy.length;
+        CLOUDS.log(`<b>wysłano ${sc.nazwa}</b> — ${sc.ile} wpisów, chmury OK: ${chmuryOk}/${chmuryRazem}`);
+        bledy.forEach(([k, v]) => CLOUDS.log("⚠ " + k + ": " + v));
+        SESJA.zapiszZLogiem();
+      } catch (e) { CLOUDS.log("⚠ wysyłka nieudana: " + e.message); }
+      /* jeden zbiorczy komunikat */
+      if (lokalnieOk && chmuryRazem && chmuryOk === chmuryRazem)
+        toast("Zapisano ✓ — telefon + " + chmuryOk + (chmuryOk > 1 ? " chmury" : " chmura"));
+      else if (lokalnieOk && !chmuryRazem) toast("Zapisano na telefonie ✓ (brak skonfigurowanych chmur)");
+      else if (lokalnieOk && chmuryOk) toast("Telefon ✓, chmury: " + chmuryOk + "/" + chmuryRazem + " — reszta w dzienniku");
+      else if (lokalnieOk) toast("Telefon ✓, chmury: błąd — szczegóły w dzienniku");
+      else toast("Nie udało się zapisać — szczegóły w dzienniku");
+    } catch (e) { toast("Błąd: " + e.message); }
+    wsz.disabled = false; wsz.textContent = "Zapisz wszędzie";
+    rysujSync();
+    return;
+  }
   const bz = e.target.closest("[data-zapisz-wies]");
   if (bz) {
     const wies = bz.dataset.zapiszWies;
