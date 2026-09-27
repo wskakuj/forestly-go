@@ -247,7 +247,7 @@ const CLOUDS = (() => {
       zadania.push(["nextcloud", nextcloudPut(nc, nazwa, blob)]);
     }
     if (pc && pc.token) zadania.push(["pcloud", pcloudUpload(pc, nazwa, blob)]);
-    if (gd && gd.sa) zadania.push(["gdrive", gdriveUpload(gd, nazwa, blob)]);
+    if (gd && gd.refreshToken) zadania.push(["gdrive", gdriveUpload(gd, nazwa, blob)]);
     if (!zadania.length) throw new Error("brak skonfigurowanych chmur — dodaj je w zakładce Sync");
 
     const wyniki = await Promise.allSettled(zadania.map(z => z[1]));

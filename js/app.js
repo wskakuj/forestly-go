@@ -392,6 +392,32 @@ $("#btn-mapa").addEventListener("click", () => przelaczTab("mapa"));
 
 /* ---------- mapa ---------- */
 let mapa = null, pinezka = null, satInitDone = false, warstwaDrog = null, warstwaWpisow = null;
+let znacznikPozycji = null, ostatniaPozycja = null;
+/* nasza pozycja z GPS — niebieska kropka na mapie */
+function pokazPozycje(lat, lng) {
+  ostatniaPozycja = [lat, lng];
+  if (!mapa) return;
+  if (!znacznikPozycji) {
+    znacznikPozycji = L.circleMarker([lat, lng],
+      { radius: 9, color: "#ffffff", weight: 3, fillColor: "#2A468B", fillOpacity: 1 }).addTo(mapa);
+  } else znacznikPozycji.setLatLng([lat, lng]);
+}
+if (navigator.geolocation) {
+  navigator.geolocation.watchPosition(p => pokazPozycje(p.coords.latitude, p.coords.longitude),
+    () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
+}
+$("#btn-pozycja").addEventListener("click", () => {
+  if (!mapa) return;
+  const najedz = () => mapa.setView(ostatniaPozycja, Math.max(mapa.getZoom(), 16));
+  if (ostatniaPozycja) { najedz(); return; }
+  if (!navigator.geolocation) { toast("Brak GPS na tym urządzeniu"); return; }
+  toast("Ustalam pozycję…");
+  navigator.geolocation.getCurrentPosition(p => {
+    pokazPozycje(p.coords.latitude, p.coords.longitude);
+    najedz();
+  }, () => toast("Nie mogę ustalić pozycji — sprawdź, czy GPS jest włączony"),
+    { enableHighAccuracy: true, timeout: 10000 });
+});
 function przelaczDrogi(on) {
   if (!mapa) return;
   if (on && !warstwaDrog) {
@@ -655,7 +681,6 @@ async function rysujSync() {
   $("#s-folder").textContent = dir ? dir.name : "nie wybrano";
   $("#btn-folder").textContent = dir ? "Zmień folder" : "Wybierz folder";
   $("#btn-folder").style.display = FOLDER_MOZLIWY ? "" : "none";
-  if (!FOLDER_MOZLIWY && !dir) $("#s-folder").textContent = "pliki pobierasz przyciskiem Pobierz";
   $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?");
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
@@ -672,7 +697,6 @@ async function rysujSync() {
     const nazwa = XLSXIO.nazwaPliku(w, autor || "x");
     return `<div class="s-plik">
       <div class="ri-main"><b>${nazwa}</b><small>${ile} wpisów</small></div>
-      <button class="fab mini" data-zapisz-wszedzie="${w}">Zapisz wszędzie</button>
     </div>`;
   }).join("") : '<div class="s-notka">Brak wpisów — zacznij od zakładki „Nowy opis”.</div>';
   odswiezAppbar();
@@ -867,41 +891,6 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) SESJA
 $("#s-pliki").addEventListener("click", async e => {
   const bw = e.target.closest("[data-wyslij-wies]");
   if (bw) { await wyslijWies(bw.dataset.wyslijWies); return; }
-  const wsz = e.target.closest("[data-zapisz-wszedzie]");
-  if (wsz) {
-    const wies = wsz.dataset.zapiszWszedzie;
-    wsz.disabled = true; wsz.textContent = "…";
-    try {
-      /* kopia na telefonie */
-      const autor = await DB.metaGet("autor") || "x";
-      const wpisy = await DB.wpisyByWies(wies);
-      const r = await XLSXIO.zapiszDoFolderu(wies, autor, wpisy);
-      const lokalnieOk = r.tryb !== "blad";
-      if (lokalnieOk) CLOUDS.log("<b>zapisano lokalnie</b> " + r.nazwa + (r.folder ? " (folder)" : " (pobieranie)"));
-      else CLOUDS.log("⚠ zapis lokalny nieudany: " + (r.powod || "?"));
-      /* chmury — wysylamy tam gdzie skonfigurowane */
-      let chmuryOk = 0, chmuryRazem = 0;
-      try {
-        const sc = await CLOUDS.synchronizujWies(null, wies);
-        chmuryOk = Object.values(sc.raport).filter(v => v === "ok").length;
-        const bledy = Object.entries(sc.raport).filter(([k, v]) => v !== "ok");
-        chmuryRazem = chmuryOk + bledy.length;
-        CLOUDS.log(`<b>wysłano ${sc.nazwa}</b> — ${sc.ile} wpisów, chmury OK: ${chmuryOk}/${chmuryRazem}`);
-        bledy.forEach(([k, v]) => CLOUDS.log("⚠ " + k + ": " + v));
-        SESJA.zapiszZLogiem();
-      } catch (e) { CLOUDS.log("⚠ wysyłka nieudana: " + e.message); }
-      /* jeden zbiorczy komunikat */
-      if (lokalnieOk && chmuryRazem && chmuryOk === chmuryRazem)
-        toast("Zapisano ✓ — telefon + " + chmuryOk + (chmuryOk > 1 ? " chmury" : " chmura"));
-      else if (lokalnieOk && !chmuryRazem) toast("Zapisano na telefonie ✓ (brak skonfigurowanych chmur)");
-      else if (lokalnieOk && chmuryOk) toast("Telefon ✓, chmury: " + chmuryOk + "/" + chmuryRazem + " — reszta w dzienniku");
-      else if (lokalnieOk) toast("Telefon ✓, chmury: błąd — szczegóły w dzienniku");
-      else toast("Nie udało się zapisać — szczegóły w dzienniku");
-    } catch (e) { toast("Błąd: " + e.message); }
-    wsz.disabled = false; wsz.textContent = "Zapisz wszędzie";
-    rysujSync();
-    return;
-  }
   const bz = e.target.closest("[data-zapisz-wies]");
   if (bz) {
     const wies = bz.dataset.zapiszWies;
@@ -917,9 +906,28 @@ $("#s-pliki").addEventListener("click", async e => {
   }
 });
 $("#btn-wyslij-wszystko").addEventListener("click", async () => {
-  const wsie = await DB.wpisyWsie();
-  if (!wsie.length) { toast("Brak wpisów do wysłania"); return; }
-  for (const w of wsie) await wyslijWies(w, true);
+  const btn = $("#btn-wyslij-wszystko");
+  if (btn) { btn.disabled = true; btn.textContent = "Synchronizuję…"; }
+  try {
+    const wsie = await DB.wpisyWsie();
+    if (!wsie.length) { toast("Brak wpisów do wysłania"); return; }
+    const autor = await DB.metaGet("autor") || "x";
+    let lokalnie = 0;
+    for (const w of wsie) {
+      /* kopia na telefonie (jeśli wybrany folder / pobieranie) */
+      try {
+        const wpisy = await DB.wpisyByWies(w);
+        const r = await XLSXIO.zapiszDoFolderu(w, autor, wpisy);
+        if (r.tryb !== "blad") { lokalnie++; CLOUDS.log("<b>zapisano lokalnie</b> " + r.nazwa + (r.folder ? " (folder)" : " (pobieranie)")); }
+        else CLOUDS.log("⚠ zapis lokalny nieudany: " + (r.powod || "?"));
+      } catch (e) { /* brak folderu — pomijamy kopię lokalną */ }
+      /* chmury */
+      await wyslijWies(w, true);
+    }
+    if (lokalnie) toast("Kopie na telefonie: " + lokalnie + " · szczegóły w dzienniku");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Synchronizuj"; }
+  }
 });
 async function wyslijWies(wies, cicho) {
   const btn = document.querySelector(`[data-wyslij-wies="${wies}"]`);

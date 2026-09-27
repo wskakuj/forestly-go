@@ -169,6 +169,7 @@
     <div class="mapa-pasek">
       <button type="button" class="loc-btn" id="btn-gps2">📡 Tu stoję (GPS)</button>
       <label class="mapa-przel"><input type="checkbox" id="mapa-drogi" checked> drogi i nazwy</label>
+      <button type="button" class="loc-btn" id="btn-pozycja">◉ Tu jestem</button>
       <span class="mapa-info" id="mapa-info">kliknij mapę, aby postawić pinezkę</span>
       <button type="button" class="fab mini" id="btn-pin-do-opisu" disabled>Użyj pinezki w opisie</button>
     </div>
@@ -181,20 +182,19 @@
       <div class="s-karta">
         <div class="s-tytul">Urządzenie</div>
         <div class="s-wiersz"><span>Leśnik</span><b id="s-autor">—</b></div>
-        <div class="s-wiersz"><span>Folder na telefonie</span><b id="s-folder">nie wybrano</b></div>
         <div class="s-wiersz"><span>Wersja aplikacji</span><b id="s-wersja">—</b></div>
         <div class="s-akcje"><button type="button" class="loc-btn" id="btn-sprawdz-aktualizacje">↻ Sprawdź aktualizacje</button></div>
         <button type="button" class="fab" id="btn-instaluj" style="display:none;margin:10px 0 0">📲 Zainstaluj Forestly GO</button>
-        <button type="button" class="loc-btn" id="btn-folder">Wybierz folder</button>
-        <div class="s-notka">Excel zapisuje się bezpośrednio do tego folderu — widoczny dla innych aplikacji.<br>Przeglądarka podaje tylko nazwę folderu (bez pełnej ścieżki) — to jej celowe ograniczenie.</div>
       </div>
 
       <div class="s-karta">
         <div class="s-tytul">Pliki do wysłania</div>
+        <div class="s-wiersz"><span>Folder na telefonie</span><b id="s-folder">nie wybrano</b></div>
+        <button type="button" class="loc-btn" id="btn-folder">Wybierz folder na telefonie</button>
         <div id="s-pliki"></div>
-        <button type="button" class="fab" id="btn-wyslij-wszystko">Wyślij teraz</button>
-        <div class="s-notka">Każde „wyślij” wrzuca plik na Nextcloud (fizycznie: Twój QNAP), a w tej samej
-        chwili kopię na Dysk Google i pCloud. Poprawka wpisu przed wysłaniem = nowa wersja pliku.</div>
+        <button type="button" class="fab" id="btn-wyslij-wszystko">Synchronizuj</button>
+        <div class="s-notka">Synchronizacja wrzuca każdy plik na skonfigurowane dyski sieciowe, a kopię
+        zapisuje w folderze na telefonie. Poprawka wpisu przed synchronizacją = nowa wersja pliku.</div>
       </div>
 
       <div class="s-karta">
@@ -213,8 +213,8 @@
         <div class="s-tytul">Chmury</div>
         <div class="chmury-lista" id="s-chmury-status">—</div>
         <button type="button" class="fab szary" id="btn-chmury-ustawienia">☁ Ustawienia chmur</button>
-        <div class="s-notka">Nextcloud (główna, Twój QNAP) + pCloud i Dysk Google jako kopie.
-        Konfiguracja w osobnym oknie — na głównej karcie robi porządek.</div>
+        <div class="s-notka">Kopie opisów trafiają jednocześnie na skonfigurowane dyski sieciowe
+        i do chmur — każda wersja pliku jest zabezpieczona w kilku miejscach naraz.</div>
       </div>
 
       <div class="s-karta">
