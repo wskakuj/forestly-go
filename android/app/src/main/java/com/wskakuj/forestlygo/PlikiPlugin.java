@@ -36,11 +36,13 @@ public class PlikiPlugin extends Plugin {
     @ActivityCallback
     private void wybranoFolder(PluginCall call, ActivityResult result) {
         if (call == null) return;
-        if (result.getResultCode() != android.app.Activity.RESULT_OK || result.getData() == null) {
+        /* androidx zwraca tu Intent — URI siedzi w nim (getData().getData()) */
+        Intent dane = result.getData();
+        Uri uri = (dane != null) ? dane.getData() : null;
+        if (result.getResultCode() != android.app.Activity.RESULT_OK || uri == null) {
             call.reject("anulowano");
             return;
         }
-        Uri uri = result.getData();
         try {
             // dostęp zapamiętany także po restarcie aplikacji
             getContext().getContentResolver().takePersistableUriPermission(uri,

@@ -187,31 +187,59 @@ const CLOUDS = (() => {
     return new Error(kontekst + " (HTTP " + r.status + ")" + dlaczego);
   }
 
-  /* szuka folderu aplikacji; jak nie ma — tworzy (folder należy do usera) */
-  async function gdriveFolderId(token, nazwa) {
-    if (_folderIdCache[nazwa]) return _folderIdCache[nazwa];
-    const q = "mimeType='application/vnd.google-apps.folder' and name='" +
+  /* szuka folderu (opcjonalnie wewnątrz innego folderu); jak nie ma — tworzy */
+  async function gdriveFolderId(token, nazwa, rodzic) {
+    const klucz = (rodzic || "") + "/" + nazwa;
+    if (_folderIdCache[klucz]) return _folderIdCache[klucz];
+    let q = "mimeType='application/vnd.google-apps.folder' and name='" +
       String(nazwa).replace(/'/g, "\\'") + "' and trashed=false";
+    if (rodzic) q += " and '" + rodzic + "' in parents";
     const r = await fetch("https://www.googleapis.com/drive/v3/files?q=" +
-      encodeURIComponent(q) + "&fields=files(id,name)&pageSize=5",
+      encodeURIComponent(q) + "&fields=files(id,name)&pageSize=5" +
+      "&supportsAllDrives=true&includeItemsFromDrives=true",
       { headers: { Authorization: "Bearer " + token } });
     if (!r.ok) throw await gdriveBlad(r, "Dysk Google: nie mogę szukać folderu");
     const f = ((await r.json()).files || [])[0];
-    if (f) return _folderIdCache[nazwa] = f.id;
+    if (f) return _folderIdCache[klucz] = f.id;
+    const meta = { name: nazwa, mimeType: "application/vnd.google-apps.folder" };
+    if (rodzic) meta.parents = [rodzic];
     const tw = await fetch("https://www.googleapis.com/drive/v3/files?fields=id", {
       method: "POST",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-      body: JSON.stringify({ name: nazwa, mimeType: "application/vnd.google-apps.folder" })
+      body: JSON.stringify(meta)
     });
     if (!tw.ok) throw await gdriveBlad(tw, "Dysk Google: nie mogę utworzyć folderu");
-    return _folderIdCache[nazwa] = (await tw.json()).id;
+    return _folderIdCache[klucz] = (await tw.json()).id;
   }
 
   async function gdriveUpload(cfg, nazwa, blob) {
     const token = await gdriveToken(cfg);
-    const meta = { name: nazwa };
     const nazwaFolderu = (cfg.folder || "FORESTLY GO").trim();
-    meta.parents = [await gdriveFolderId(token, nazwaFolderu)];
+    const idGlownego = await gdriveFolderId(token, nazwaFolderu);
+    /* folder leśnika wewnątrz głównego — jak w Nextcloud */
+    const autor = await sciezkaAutor();
+    const idAutora = (autor && autor !== "nieznany") ? await gdriveFolderId(token, autor, idGlownego) : idGlownego;
+    /* istniejący plik o tej nazwie nadpisujemy zamiast dublować */
+    const qs = "name='" + String(nazwa).replace(/'/g, "\\'") +
+      "' and trashed=false and '" + idAutora + "' in parents";
+    const sz = await fetch("https://www.googleapis.com/drive/v3/files?q=" +
+      encodeURIComponent(qs) + "&fields=files(id)&pageSize=2" +
+      "&supportsAllDrives=true&includeItemsFromDrives=true",
+      { headers: { Authorization: "Bearer " + token } });
+    if (!sz.ok) throw await gdriveBlad(sz, "Dysk Google: nie mogę szukać pliku");
+    const stary = (((await sz.json()).files) || [])[0];
+    if (stary) {
+      const resp = await fetch("https://www.googleapis.com/upload/drive/v3/files/" +
+        stary.id + "?uploadType=media&supportsAllDrives=true", {
+        method: "PATCH",
+        headers: { Authorization: "Bearer " + token,
+          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+        body: blob
+      });
+      if (!resp.ok) throw await gdriveBlad(resp, "Dysk Google: nadpisywanie nieudane");
+      return true;
+    }
+    const meta = { name: nazwa, parents: [idAutora] };
     const granica = "taksator" + Date.now();
     const czesci = [];
     czesci.push("--" + granica + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(meta) + "\r\n");

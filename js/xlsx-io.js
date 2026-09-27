@@ -41,8 +41,7 @@ const XLSXIO = (() => {
     const czysc = s => String(s || "").trim()
       .replace(/[ąćęłńóśźż]/g, c => ({ "ą":"a","ć":"c","ę":"e","ł":"l","ń":"n","ó":"o","ś":"s","ź":"z","ż":"z" }[c]))
       .replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "wpisy";
-    const dzis = new Date().toISOString().slice(0, 10);
-    return czysc(wies) + "_" + dzis + ".xlsx";
+    return czysc(wies) + ".xlsx";
   }
 
   async function blobZwpisow(wpisy) {

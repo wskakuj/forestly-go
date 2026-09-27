@@ -26,7 +26,7 @@ function nowyStan() {
     wies: "", dzialki: [],
     siedlisko: null, panujacy: null, drugi: null, udzialPanujacy: 10, udzialDrugi: 0,
     wiekPrzec: 90, pjd: [], pjdWiekPrzec: 70,
-    zwarcie: null, podsz: [], podszProc: 50,
+    zwarcie: null, podsz: [], podszProc: 0,
     elWys: "", elPier: "", elBon: "", elZad: "", elMiaz: "",
     wskTyp: "", wskPow: "", wskMiaz: "",
     lat: null, lon: null, locZrodlo: null
@@ -755,10 +755,12 @@ $("#btn-nc-save").addEventListener("click", async () => {
     pass: $("#nc-pass").value, sciezka: $("#nc-path").value.trim() });
   toast("Nextcloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Nextcloud" +
     ($("#nc-path").value.trim() ? " — folder: " + $("#nc-path").value.trim() : ""));
+  rysujSync();
 });
 $("#btn-pc-save").addEventListener("click", async () => {
   await DB.metaSet("pcloud", { token: $("#pc-token").value.trim(), path: $("#pc-path").value.trim() || "/Taksator" });
   toast("pCloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację pCloud");
+  rysujSync();
 });
 /* Dysk Google: logowanie kontem użytkownika (OAuth + PKCE) */
 /* Identyfikator klienta aplikacji ForestlyGO w Google Cloud — wpisany na stałe,
@@ -794,6 +796,7 @@ async function gdPolaczKod(kod) {
     const r = await CLOUDS.gdriveDolaczKod(kod);
     await DB.metaSet("gdrive", { clientId: r.clientId, refreshToken: r.refreshToken,
       folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
+    rysujSync();   // ptaszek na zielono od razu
     toast("Połączono z Dyskiem Google ✓");
     CLOUDS.log("<b>Dysk Google</b> — zalogowano kontem Google");
     /* od razu sprawdzamy, czy wszystko działa — user widzi efekt bez klikania */
@@ -813,6 +816,7 @@ $("#btn-gd-save").addEventListener("click", async () => {
     refreshToken: stary.refreshToken, folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
   toast("Dysk Google zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Dysku Google — folder: " +
     ($("#gd-folder").value.trim() || "FORESTLY GO"));
+  rysujSync();
 });
 $("#btn-nc-test").addEventListener("click", async () => {
   const cfg = { url: $("#nc-url").value.trim(), user: $("#nc-user").value.trim(), pass: $("#nc-pass").value };
