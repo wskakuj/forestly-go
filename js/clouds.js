@@ -74,9 +74,10 @@ const CLOUDS = (() => {
   }
 
   /* ---------- PCLOUD ---------- */
-  /* logowanie hasłem: najpierw digest (skrót), a gdy pCloud odmówi —
-     zwykłe dane (dokładnie tak loguje oficjalne SDK pCloud, wszystko po HTTPS).
-     Zwraca token (ważny 2 lata) + e-mail. */
+  /* logowanie hasłem. pCloud ma DWA serwery API: amerykański
+     (api.pcloud.com) i europejski (eapi.pcloud.com) — konto działa tylko
+     na jednym z nich, a zły serwer odpowiada "Log in failed" nawet przy
+     dobrym haśle. Aplikacja próbuje oba po kolei i zapamiętuje swój. */
   async function pcloudZaloguj(email, haslo) {
     if (!email || !haslo) throw new Error("podaj e-mail i hasło pCloud");
     const login = email.trim().toLowerCase();
@@ -84,34 +85,39 @@ const CLOUDS = (() => {
       const d = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(t));
       return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("");
     };
-    const baza = "https://api.pcloud.com/userinfo?getauth=1&logout=1&authexpire=63072000" +
-      "&username=" + encodeURIComponent(login);
-    let dane = null;
-    /* próba 1: digest — hasło nie leci jawnie */
-    try {
-      const r1 = await fetch("https://api.pcloud.com/getdigest?username=" + encodeURIComponent(login));
-      const d1 = await r1.json().catch(() => ({}));
-      if (d1.digest) {
-        const pd = await sha1hex(haslo + await sha1hex(login) + d1.digest);
-        const r2 = await fetch(baza + "&digest=" + encodeURIComponent(d1.digest) +
-          "&passworddigest=" + encodeURIComponent(pd));
-        dane = await r2.json().catch(() => ({}));
+    let ostatniBlad = null;
+    for (const host of ["api.pcloud.com", "eapi.pcloud.com"]) {
+      const baza = "https://" + host + "/userinfo?getauth=1&logout=1&authexpire=63072000" +
+        "&username=" + encodeURIComponent(login);
+      let dane = null;
+      /* próba 1: digest — hasło nie leci jawnie */
+      try {
+        const r1 = await fetch("https://" + host + "/getdigest?username=" + encodeURIComponent(login));
+        const d1 = await r1.json().catch(() => ({}));
+        if (d1.digest) {
+          const pd = await sha1hex(haslo + await sha1hex(login) + d1.digest);
+          const r2 = await fetch(baza + "&digest=" + encodeURIComponent(d1.digest) +
+            "&passworddigest=" + encodeURIComponent(pd));
+          dane = await r2.json().catch(() => ({}));
+        }
+      } catch (e) { /* następna próba */ }
+      /* próba 2: zwykłe hasło po HTTPS (tak loguje oficjalne SDK pCloud) */
+      if (!dane || dane.result !== 0 || !dane.auth) {
+        const r3 = await fetch(baza + "&password=" + encodeURIComponent(haslo));
+        dane = await r3.json().catch(() => ({}));
       }
-    } catch (e) { /* idziemy do próby 2 */ }
-    /* próba 2: zwykłe hasło po HTTPS (tak jak oficjalne SDK pCloud) */
-    if (!dane || dane.result !== 0 || !dane.auth) {
-      const r3 = await fetch(baza + "&password=" + encodeURIComponent(haslo));
-      dane = await r3.json().catch(() => ({}));
+      if (dane.result === 0 && dane.auth) return { token: dane.auth, email: dane.email, host };
+      if (dane.result === 4000) throw new Error("pCloud: zbyt wiele prób logowania — " +
+        "odczekaj około godzinę i spróbuj jeszcze raz (raz)");
+      ostatniBlad = dane;
     }
-    if (dane.result !== 0) throw new Error("pCloud: " + (dane.error || "błąd logowania (" + dane.result + ")") +
+    throw new Error("pCloud: " + ((ostatniBlad && ostatniBlad.error) || "logowanie nie udało się") +
       " — sprawdź, czy te dane działają na my.pcloud.com");
-    if (!dane.auth) throw new Error("pCloud: serwer nie zwrócił tokenu");
-    return { token: dane.auth, email: dane.email };
   }
   async function pcloudUpload(cfg, nazwa, blob) {
     const sciezka = cfg.path || "/Taksator";
     const autor = await sciezkaAutor();
-    const url = "https://api.pcloud.com/uploadfile?auth=" + encodeURIComponent(cfg.token) +
+    const url = "https://" + (cfg.host || "api.pcloud.com") + "/uploadfile?auth=" + encodeURIComponent(cfg.token) +
       "&path=" + encodeURIComponent(ukosnik(sciezka) + autor) + "&filename=" + encodeURIComponent(nazwa) +
       "&nopartial=1";
     const fd = new FormData();
@@ -124,7 +130,7 @@ const CLOUDS = (() => {
   function ukosnik(p) { return p.endsWith("/") ? p : p + "/"; }
 
   async function pcloudTest(cfg) {
-    const resp = await fetch("https://api.pcloud.com/userinfo?auth=" + encodeURIComponent(cfg.token));
+    const resp = await fetch("https://" + (cfg.host || "api.pcloud.com") + "/userinfo?auth=" + encodeURIComponent(cfg.token));
     const dane = await resp.json().catch(() => ({}));
     if (dane.result !== 0) throw new Error("pCloud: " + (dane.error || "błąd " + dane.result));
     return { ok: true, email: dane.email };

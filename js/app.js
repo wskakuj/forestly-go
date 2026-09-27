@@ -760,7 +760,7 @@ $("#btn-nc-save").addEventListener("click", async () => {
 $("#btn-pc-zaloguj").addEventListener("click", async () => {
   try {
     const r = await CLOUDS.pcloudZaloguj($("#pc-email").value.trim(), $("#pc-pass").value);
-    await DB.metaSet("pcloud", { token: r.token, email: r.email,
+    await DB.metaSet("pcloud", { token: r.token, email: r.email, host: r.host,
       path: $("#pc-path").value.trim() || "/FORESTLY BAZA" });
     $("#pc-pass").value = "";
     toast("Zalogowano do pCloud ✓ (" + r.email + ")");
@@ -772,7 +772,7 @@ $("#btn-pc-zaloguj").addEventListener("click", async () => {
 $("#btn-pc-save").addEventListener("click", async () => {
   const stara = await DB.metaGet("pcloud") || {};
   if (!stara.token) { toast("Najpierw zaloguj się do pCloud"); return; }
-  await DB.metaSet("pcloud", { token: stara.token, email: stara.email,
+  await DB.metaSet("pcloud", { token: stara.token, email: stara.email, host: stara.host,
     path: $("#pc-path").value.trim() || "/FORESTLY BAZA" });
   toast("Folder zapisany"); CLOUDS.log("<b>zapisano</b> folder pCloud: " +
     ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
