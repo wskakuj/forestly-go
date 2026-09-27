@@ -74,29 +74,39 @@ const CLOUDS = (() => {
   }
 
   /* ---------- PCLOUD ---------- */
-  /* logowanie hasłem (digest — hasło nie leci jawnie): zwraca token + e-mail */
+  /* logowanie hasłem: najpierw digest (skrót), a gdy pCloud odmówi —
+     zwykłe dane (dokładnie tak loguje oficjalne SDK pCloud, wszystko po HTTPS).
+     Zwraca token (ważny 2 lata) + e-mail. */
   async function pcloudZaloguj(email, haslo) {
     if (!email || !haslo) throw new Error("podaj e-mail i hasło pCloud");
+    const login = email.trim().toLowerCase();
     const sha1hex = async t => {
       const d = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(t));
       return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("");
     };
-    /* 1) sól */
-    const r1 = await fetch("https://api.pcloud.com/getdigest?username=" + encodeURIComponent(email));
-    const d1 = await r1.json().catch(() => ({}));
-    if (!d1.digest) throw new Error("pCloud: " + (d1.error || "serwer nie odpowiedział (sprawdź e-mail)"));
-    /* 2) passworddigest = sha1(haslo + sha1(login_małymi) + digest) */
-    const login = email.trim().toLowerCase();
-    const pd = await sha1hex(haslo + await sha1hex(login) + d1.digest);
-    /* 3) logowanie — dostajemy token (auth) ważny 2 lata */
-    const r2 = await fetch("https://api.pcloud.com/userinfo?getauth=1&logout=1&authexpire=63072000" +
-      "&username=" + encodeURIComponent(login) +
-      "&digest=" + encodeURIComponent(d1.digest) +
-      "&passworddigest=" + encodeURIComponent(pd));
-    const d2 = await r2.json().catch(() => ({}));
-    if (d2.result !== 0) throw new Error("pCloud: " + (d2.error || "błąd logowania (" + d2.result + ")"));
-    if (!d2.auth) throw new Error("pCloud: serwer nie zwrócił tokenu");
-    return { token: d2.auth, email: d2.email };
+    const baza = "https://api.pcloud.com/userinfo?getauth=1&logout=1&authexpire=63072000" +
+      "&username=" + encodeURIComponent(login);
+    let dane = null;
+    /* próba 1: digest — hasło nie leci jawnie */
+    try {
+      const r1 = await fetch("https://api.pcloud.com/getdigest?username=" + encodeURIComponent(login));
+      const d1 = await r1.json().catch(() => ({}));
+      if (d1.digest) {
+        const pd = await sha1hex(haslo + await sha1hex(login) + d1.digest);
+        const r2 = await fetch(baza + "&digest=" + encodeURIComponent(d1.digest) +
+          "&passworddigest=" + encodeURIComponent(pd));
+        dane = await r2.json().catch(() => ({}));
+      }
+    } catch (e) { /* idziemy do próby 2 */ }
+    /* próba 2: zwykłe hasło po HTTPS (tak jak oficjalne SDK pCloud) */
+    if (!dane || dane.result !== 0 || !dane.auth) {
+      const r3 = await fetch(baza + "&password=" + encodeURIComponent(haslo));
+      dane = await r3.json().catch(() => ({}));
+    }
+    if (dane.result !== 0) throw new Error("pCloud: " + (dane.error || "błąd logowania (" + dane.result + ")") +
+      " — sprawdź, czy te dane działają na my.pcloud.com");
+    if (!dane.auth) throw new Error("pCloud: serwer nie zwrócił tokenu");
+    return { token: dane.auth, email: dane.email };
   }
   async function pcloudUpload(cfg, nazwa, blob) {
     const sciezka = cfg.path || "/Taksator";
