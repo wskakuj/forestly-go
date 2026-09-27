@@ -22,7 +22,7 @@ const OPTAX = (() => {
   /* pełny, wieloliniowy opis — jak w czarnej belce podglądu */
   function linie(w) {
     const out = [];
-    const s = w.siedlisko || "—";
+    const s = (w.siedlisko === "OJ" ? "OlJ" : w.siedlisko) || "—";
     out.push(s + "  " + (sklad(w) || "—"));
     if (w.panujacy)
       out.push(w.panujacy + "/" + (w.wiekPrzec - KROK) + "-" + (w.wiekPrzec + KROK) + "/" + w.wiekPrzec + "l");

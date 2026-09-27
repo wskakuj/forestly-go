@@ -299,3 +299,20 @@ button { font-family: var(--font-body); }
   align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
 .chm-tak { color: #7fe08c; background: rgba(127, 224, 140, .14); }
 .chm-nie { color: #ff8a8a; background: rgba(255, 138, 138, .14); }
+
+/* ---------- okienko OPTAX po kliknięciu pinezki na mapie ---------- */
+.optax-pop .leaflet-popup-content-wrapper { background: var(--panel); color: var(--ink);
+  border: 1px solid var(--line2); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.55); }
+.optax-pop .leaflet-popup-content { margin: 13px 15px; line-height: 1.45; }
+.optax-pop .leaflet-popup-tip { background: var(--panel); }
+.optax-pop a.leaflet-popup-close-button { color: var(--dim); }
+.oo-nag { font-weight: 700; font-size: 13.5px; color: var(--accent); text-transform: uppercase;
+  letter-spacing: .4px; margin-bottom: 8px; }
+.oo-optax { font: 600 12.5px/1.6 var(--font-mono); background: var(--wewnetrzny);
+  border: 1px solid var(--line2); border-radius: 9px; padding: 8px 10px; }
+.oo-brak { color: var(--dim); }
+.oo-dane { font-size: 12.5px; color: var(--dim); margin-top: 7px; }
+.oo-btn { margin-top: 10px; width: 100%; padding: 9px 12px; border-radius: 10px;
+  border: 1px solid var(--line2); background: var(--panel2); color: var(--ink);
+  font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.oo-btn:active { background: var(--accent); color: #06251b; }

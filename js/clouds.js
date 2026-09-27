@@ -78,9 +78,10 @@ const CLOUDS = (() => {
      (api.pcloud.com) i europejski (eapi.pcloud.com) — konto działa tylko
      na jednym z nich, a zły serwer odpowiada "Log in failed" nawet przy
      dobrym haśle. Aplikacja próbuje oba po kolei i zapamiętuje swój. */
-  async function pcloudZaloguj(email, haslo) {
+  async function pcloudZaloguj(email, haslo, kod) {
     if (!email || !haslo) throw new Error("podaj e-mail i hasło pCloud");
     const login = email.trim().toLowerCase();
+    const kod2fa = (kod || "").replace(/\s+/g, "");
     const sha1hex = async t => {
       const d = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(t));
       return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("");
@@ -88,7 +89,8 @@ const CLOUDS = (() => {
     let ostatniBlad = null;
     for (const host of ["api.pcloud.com", "eapi.pcloud.com"]) {
       const baza = "https://" + host + "/userinfo?getauth=1&logout=1&authexpire=63072000" +
-        "&username=" + encodeURIComponent(login);
+        "&username=" + encodeURIComponent(login) +
+        (kod2fa ? "&code=" + encodeURIComponent(kod2fa) : "");
       let dane = null;
       /* próba 1: digest — hasło nie leci jawnie */
       try {
@@ -109,6 +111,10 @@ const CLOUDS = (() => {
       if (dane.result === 0 && dane.auth) return { token: dane.auth, email: dane.email, host };
       if (dane.result === 4000) throw new Error("pCloud: zbyt wiele prób logowania — " +
         "odczekaj około godzinę i spróbuj jeszcze raz (raz)");
+      /* konto z kodem dwuetapowym (2FA) — serwer żąda kodu */
+      if ((dane.result === 1022 || /provide 'code'/i.test(dane.error || "")) && !kod2fa)
+        throw new Error("pCloud: konto zabezpieczone kodem (2FA) — wpisz kod z SMS/aplikacji " +
+          "w pole \"kod\" poniżej hasła i zaloguj się ponownie");
       ostatniBlad = dane;
     }
     throw new Error("pCloud: " + ((ostatniBlad && ostatniBlad.error) || "logowanie nie udało się") +

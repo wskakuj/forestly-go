@@ -1,13 +1,18 @@
 /* ===================== TAKSATOR TERENOWY — LOGIKA ===================== */
 
 /* ---------- słowniki ---------- */
+const GATUNKI = ["Ak", "Brz", "Brzb", "Brzom", "Bk", "Czm", "Czr", "Dg", "Db", "Dbs", "Dbc", "Dbb",
+  "Gb", "Gr", "Jb", "Jrz", "Jw", "Jd", "Js", "Jkl", "Kl", "Ksz", "Lp", "Md", "Ol", "Olsz", "Orz",
+  "Os", "So", "Sob", "Socz", "Sosm", "Sowm", "Św", "Tp", "Wz", "Wb"];
 const SLOWNIKI = {
-  siedlisko: ["Bs", "Bśw", "Bw", "Bb", "BMśw", "BMw", "LMśw", "LMw", "Lśw", "Lw", "Ol", "OJ"],
-  panujacy:  ["So", "Db", "Św", "Jd", "Bk", "Brz", "Ol", "Os", "Gb", "Js", "Wz"],
-  drugi:     ["So", "Db", "Św", "Brz", "Js", "Ol", "Md", "Dg", "Jw"],
-  pjd:       ["So", "Jw", "Db", "Brz", "Js", "Ol", "Św"],
+  /* pełne zestawy wg WYKAZU SKRÓTÓW I SYMBOLI (Symbole nazw drzew) */
+  siedlisko: ["Bs", "Bśw", "Bw", "Bb", "BMśw", "BMw", "BMb", "LMśw", "LMw", "LMb", "Lśw", "Lw", "Lł", "Ol", "OlJ"],
+  panujacy:  GATUNKI,
+  drugi:     GATUNKI,
+  pjd:       GATUNKI,
   zwarcie:   ["pełne", "duże", "umiark.", "przeryw.", "rzadkie", "luźne"],
-  podsz:     ["krusz", "jrz", "leszcz", "suchodr", "malina", "jeżyna", "bez czarny", "trzmielina"]
+  podsz:     ["krusz", "jrz", "leszcz", "suchodr", "malina", "jeżyna", "bez czarny", "trzmielina",
+              "czeremcha", "grusza", "jabłoń", "klon", "lipa", "wierzba"]
 };
 const GRUPY_POJEDYNCZE = new Set(["siedlisko", "panujacy", "drugi", "zwarcie"]);
 const GRUPY_WIELOKROTNE = new Set(["pjd", "podsz"]);
@@ -401,6 +406,43 @@ $("#btn-mapa").addEventListener("click", () => przelaczTab("mapa"));
 
 /* ---------- mapa ---------- */
 let mapa = null, pinezka = null, satInitDone = false, warstwaDrog = null, warstwaWpisow = null;
+let podstawaMapy = null, trybMapy = "sat";
+const MAPA_SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const MAPA_OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+/* kafelki: kazdy dostaje druga szanse; gdy satelita pada - automatycznie zwykla mapa */
+function warstwaPlytek(url, opcje) {
+  const w = L.tileLayer(url, opcje);
+  let bledy = 0, przelaczono = false;
+  w.on("tileerror", e => {
+    const t = e.tile;
+    /* druga szansa dla pojedynczego kafelka */
+    if (t && !t.__sprobowano) {
+      t.__sprobowano = 1;
+      const src = t.src;
+      if (src) t.src = src + (src.includes("?") ? "&" : "?") + "s=" + Date.now();
+    }
+    /* gdy kafelków sypie się dużo — przełączamy na zwykłą mapę */
+    if (!przelaczono && trybMapy === "sat" && ++bledy >= 12) {
+      przelaczono = true;
+      toast("Mapa satelitarna chwilowo niedostępna — włączam zwykłą mapę");
+      przelaczTrybMapy("osm", true);
+    }
+  });
+  return w;
+}
+function przelaczTrybMapy(tryb, cicho) {
+  trybMapy = tryb;
+  if (podstawaMapy) mapa.removeLayer(podstawaMapy);
+  if (tryb === "osm") {
+    podstawaMapy = warstwaPlytek(MAPA_OSM, { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(mapa);
+    if (!cicho) toast("Zwykła mapa (OpenStreetMap)");
+  } else {
+    podstawaMapy = warstwaPlytek(MAPA_SAT, { maxZoom: 19, attribution: "Esri World Imagery" }).addTo(mapa);
+    if (!cicho) toast("Mapa satelitarna");
+  }
+  const btn = $("#mapa-tryb");
+  if (btn) btn.textContent = tryb === "sat" ? "🗺 Zwykła" : "🛰 Satelita";
+}
 let znacznikPozycji = null, ostatniaPozycja = null;
 /* nasza pozycja z GPS — niebieska kropka na mapie */
 function pokazPozycje(lat, lng) {
@@ -431,12 +473,50 @@ function przelaczDrogi(on) {
   if (!mapa) return;
   if (on && !warstwaDrog) {
     warstwaDrog = L.layerGroup([
-      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }),
-      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 })
+      warstwaPlytek("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }),
+      warstwaPlytek("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 })
     ]).addTo(mapa);
   } else if (!on && warstwaDrog) { mapa.removeLayer(warstwaDrog); warstwaDrog = null; }
 }
 $("#mapa-drogi").addEventListener("change", e => przelaczDrogi(e.target.checked));
+$("#mapa-tryb").addEventListener("click", () => przelaczTrybMapy(trybMapy === "sat" ? "osm" : "sat"));
+/* ---------- okienko OPTAX po kliknięciu pinezki ---------- */
+function otworzOptaxOkno(w) {
+  const esc = t => String(t).replace(/[<>&]/g, zn => ({ "<": "\u003C", ">": "\u003E", "&": "\u0026" }[zn]));
+  const nr = (Array.isArray(w.dzialki) && w.dzialki.length ? w.dzialki.join(", ") : "") || oddzPelne(w) || "—";
+  const linie = OPTAX.linie(w);
+  const el = [];
+  if (w.elWys) el.push("wys. " + w.elWys + " m");
+  if (w.elPier) el.push("pierś. " + w.elPier + " cm");
+  if (w.elBon) el.push("bon. " + w.elBon);
+  if (w.elZad) el.push("zad. " + w.elZad + "%");
+  if (w.elMiaz) el.push("miąż. " + w.elMiaz + " m³/ha");
+  const wsk = [];
+  if (w.wskTyp) wsk.push(w.wskTyp);
+  if (w.wskPow) wsk.push(w.wskPow + " ha");
+  if (w.wskMiaz) wsk.push(w.wskMiaz + " m³");
+  const box = document.createElement("div");
+  box.className = "oo-karta";
+  box.innerHTML =
+    '<div class="oo-nag">' + esc(w.wies || "?") + ' · wydz. ' + esc(nr) + '</div>' +
+    '<div class="oo-optax">' + (linie.length ? linie.map(l => '<div>' + esc(l) + '</div>').join("")
+      : '<div class="oo-brak">— brak danych —</div>') + '</div>' +
+    (el.length ? '<div class="oo-dane">' + esc(el.join(" · ")) + '</div>' : "") +
+    (wsk.length ? '<div class="oo-dane">' + esc(wsk.join(" · ")) + '</div>' : "") +
+    '<button type="button" class="oo-btn">✎ Edytuj opis</button>';
+  box.querySelector(".oo-btn").addEventListener("click", () => {
+    if (mapa) mapa.closePopup();
+    trybEdycji = w.id;
+    stan = Object.assign(nowyStan(), w);
+    if (!Array.isArray(stan.pjd)) stan.pjd = [];
+    if (!Array.isArray(stan.podsz)) stan.podsz = [];
+    uzupelnijForm(); rysuj(); przelaczTab("form");
+  });
+  L.popup({ maxWidth: 300, className: "optax-pop", autoPan: true })
+    .setLatLng([w.lat, w.lon])
+    .setContent(box)
+    .openOn(mapa);
+}
 async function odswiezPinezki() {
   if (!mapa) return;
   if (warstwaWpisow) mapa.removeLayer(warstwaWpisow);
@@ -476,13 +556,7 @@ async function odswiezPinezki() {
       html: '<span class="pin-punkt">📍</span><span class="pin-nr">' + tekst + '</span>',
       iconSize: [46, 44], iconAnchor: [23, 40] });
     const m = L.marker([w.lat, w.lon], { icon: ik }).addTo(warstwaWpisow);
-    m.on("click", () => {
-      trybEdycji = w.id;
-      stan = Object.assign(nowyStan(), w);
-      if (!Array.isArray(stan.pjd)) stan.pjd = [];
-      if (!Array.isArray(stan.podsz)) stan.podsz = [];
-      uzupelnijForm(); rysuj(); przelaczTab("form");
-    });
+    m.on("click", () => otworzOptaxOkno(w));
   }
 }
 function satInit() {
@@ -490,9 +564,7 @@ function satInit() {
   const el = $("#mapa-leaflet");
   if (!el || el.clientWidth === 0) return;
   mapa = L.map(el, { zoomControl: true }).setView([52.4226, 21.0558], 15);
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 19, attribution: "Esri World Imagery"
-  }).addTo(mapa);
+  przelaczTrybMapy("sat", true);
   const cb = document.getElementById("mapa-drogi");
   if (cb && cb.checked) przelaczDrogi(true);
   mapa.on("click", e => {
@@ -543,6 +615,7 @@ async function zapiszWpis() {
 $("#btn-zapisz").addEventListener("click", zapiszWpis);
 
 function uzupelnijForm() {
+  if (stan.siedlisko === "OJ") stan.siedlisko = "OlJ"; // stare wpisy
   $("#in-wies").value = stan.wies || "";
   if (typeof stan.dzialki === "string")
     stan.dzialki = stan.dzialki.split(",").map(x => x.replace(/\s+/g, "")).filter(Boolean);
@@ -759,10 +832,12 @@ $("#btn-nc-save").addEventListener("click", async () => {
 });
 $("#btn-pc-zaloguj").addEventListener("click", async () => {
   try {
-    const r = await CLOUDS.pcloudZaloguj($("#pc-email").value.trim(), $("#pc-pass").value);
+    const r = await CLOUDS.pcloudZaloguj($("#pc-email").value.trim(), $("#pc-pass").value,
+      $("#pc-kod") ? $("#pc-kod").value : "");
     await DB.metaSet("pcloud", { token: r.token, email: r.email, host: r.host,
       path: $("#pc-path").value.trim() || "/FORESTLY BAZA" });
     $("#pc-pass").value = "";
+    if ($("#pc-kod")) $("#pc-kod").value = "";
     toast("Zalogowano do pCloud ✓ (" + r.email + ")");
     CLOUDS.log("<b>zalogowano</b> do pCloud — " + r.email +
       ", folder: " + ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
