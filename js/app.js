@@ -407,6 +407,33 @@ async function odswiezPinezki() {
   if (warstwaWpisow) mapa.removeLayer(warstwaWpisow);
   warstwaWpisow = L.layerGroup().addTo(mapa);
   const wszystkie = (await DB.wpisyAll()).filter(w => w.lat != null && w.lon != null);
+  /* zielone pole wsi — okrąg obejmujący wszystkie jej pinezki, z nazwą */
+  const grupy = {};
+  for (const w of wszystkie) {
+    const k = w.wies || "?";
+    (grupy[k] = grupy[k] || []).push(w);
+  }
+  const bezt = t => String(t).replace(/[<>&]/g, zn => ({ "<": "\u003C", ">": "\u003E", "&": "\u0026" }[zn]));
+  const dystansM = (lat1, lon1, lat2, lon2) => {
+    const R = 6371000, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  };
+  for (const wies in grupy) {
+    const g = grupy[wies];
+    const laty = g.map(w => w.lat), lony = g.map(w => w.lon);
+    const cLat = (Math.min(...laty) + Math.max(...laty)) / 2;
+    const cLon = (Math.min(...lony) + Math.max(...lony)) / 2;
+    let r = 0;
+    for (const w of g) r = Math.max(r, dystansM(cLat, cLon, w.lat, w.lon));
+    r = Math.max(r * 1.3, 120); // margines na etykiete i pojedyncze pinezki
+    L.circle([cLat, cLon], {
+      radius: r, color: "#2dd4a7", weight: 1.5, opacity: .65,
+      fillColor: "#2dd4a7", fillOpacity: .12
+    }).addTo(warstwaWpisow)
+      .bindTooltip(bezt(wies), { permanent: true, direction: "center", className: "wies-etykieta" });
+  }
   for (const w of wszystkie) {
     const nr = (Array.isArray(w.dzialki) && w.dzialki.length ? w.dzialki.join(", ") : "") || oddzPelne(w) || "—";
     const tekst = String(nr).replace(/[<>&]/g, zn => ({ "<": "\u003C", ">": "\u003E", "&": "\u0026" }[zn]));
@@ -634,6 +661,13 @@ async function rysujSync() {
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
   odswiezBackupKarte();
+  const ncC = await DB.metaGet("nextcloud") || {};
+  const pcC = await DB.metaGet("pcloud") || {};
+  const gdC = await DB.metaGet("gdrive") || {};
+  $("#s-chmury-status").innerHTML =
+    "Nextcloud " + (ncC.url && ncC.pass ? "✓" : "—") +
+    " · pCloud " + (pcC.token ? "✓" : "—") +
+    " · Dysk Google " + (gdC.sa ? "✓" : "—");
   $("#s-pliki").innerHTML = wsie.length ? wsie.map(w => {
     const ile = wszystkie.filter(x => x.wies === w).length;
     const nazwa = XLSXIO.nazwaPliku(w, autor || "x");
@@ -748,19 +782,22 @@ $("#btn-backup-plik").addEventListener("click", async () => {
   const ok = await SESJA.pobierz();
   if (!ok) toast("Najpierw podaj leśnika (kreator)");
 });
-$("#btn-wczytaj-plik").addEventListener("click", () => {
-  window.__celPrzywrocenia = "sync";
-  $("#plik-backup").click();
-});
+/* jedno przywracanie: na komputerze wskazujesz folder, na telefonie
+   od razu plik backupu (Android nie umie wskazywać folderów) */
 $("#btn-backup-przywroc").addEventListener("click", async () => {
-  try {
-    const dir = await pokazDialogFolderu();
-    await DB.metaSet("folder", dir);
-    const r = await SESJA.przywroc(dir);
-    if (!r.ok) { toast("W tym folderze nie ma pliku backupu"); return; }
-    toast("Sesja przywrócona: " + r.ile + " wpisów ✓");
-    rysujWykaz(); odswiezAppbar();
-  } catch (e) { toast("Nie udało się wybrać folderu"); }
+  if (window.showDirectoryPicker) {
+    try {
+      const dir = await pokazDialogFolderu();
+      await DB.metaSet("folder", dir);
+      const r = await SESJA.przywroc(dir);
+      if (!r.ok) { toast("W tym folderze nie ma pliku backupu"); return; }
+      toast("Sesja przywrócona: " + r.ile + " wpisów ✓");
+      rysujWykaz(); odswiezAppbar();
+    } catch (e) { toast("Nie udało się wybrać folderu"); }
+  } else {
+    window.__celPrzywrocenia = "sync";
+    $("#plik-backup").click();
+  }
 });
 $("#plik-backup").addEventListener("change", async e => {
   const plik = e.target.files && e.target.files[0];
@@ -1050,4 +1087,15 @@ document.querySelectorAll(".chmura").forEach(d => {
   d.addEventListener("toggle", () => {
     if (d.open) document.querySelectorAll(".chmura").forEach(x => { if (x !== d) x.open = false; });
   });
+});
+
+/* ---------- okno ustawień chmur ---------- */
+$("#btn-chmury-ustawienia").addEventListener("click", () => {
+  $("#okno-chmur").classList.add("on");
+});
+$("#chmury-zamknij").addEventListener("click", () => {
+  $("#okno-chmur").classList.remove("on");
+});
+$("#okno-chmur").addEventListener("click", e => {
+  if (e.target.id === "okno-chmur") $("#okno-chmur").classList.remove("on");
 });

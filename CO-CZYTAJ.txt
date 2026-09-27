@@ -1,0 +1,20 @@
+FORESTLY GO — v1.0.20: porządki w Sync, pola wsi na mapie
+=========================================================
+
+CO NOWEGO
+  1. BACKUP SESJI — dwa przyciski zamiast trzech. "Wczytaj z pliku"
+     zniknęło; "Przywróć backup" jest jeden i sam się dostosowuje:
+     na komputerze wskazujesz folder, na telefonie od razu plik
+     backupu (Android nie umie folderów). "Pobierz backup (plik)"
+     i "Zapisz teraz" bez zmian.
+  2. CHMURY — karta w Sync pokazuje teraz tylko status
+     (Nextcloud ✓/— · pCloud ✓/— · Dysk Google ✓/—) i przycisk
+     "☁ Ustawienia chmur", który otwiera OSOBNE OKNO z zakładkami
+     trzech chmur. Zamykanie: ✕ albo dotknięcie tła.
+  3. MAPA — każda wieś ma swoje zielone pole: okrąg obejmujący
+     wszystkie pinezki tej wsi, z nazwą wsi na środku. Wieś
+     z jedną pinezką dostaje małe pole, żeby nazwa była widoczna.
+
+INSTALACJA
+  Rozpakuj do repo forestly-go ("Zamień pliki w folderze docelowym")
+  i wydaj wersję (release.bat / ForestlyGO Release).

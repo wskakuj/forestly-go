@@ -205,54 +205,16 @@
         Gdy przeglądarka wyczyści swoje dane (np. iPhone po tygodniu), wskazujesz folder raz —
         a wszystkie wpisy wracają na miejsce.</div>
         <div class="s-akcje"><button type="button" class="loc-btn" id="btn-backup-teraz">Zapisz teraz</button>
-        <button type="button" class="loc-btn" id="btn-backup-przywroc">Przywróć z folderu</button>
-        <button type="button" class="loc-btn" id="btn-backup-plik" style="display:none">Pobierz backup (plik)</button>
-        <button type="button" class="loc-btn" id="btn-wczytaj-plik">Wczytaj z pliku</button></div>
+        <button type="button" class="loc-btn" id="btn-backup-przywroc">Przywróć backup</button>
+        <button type="button" class="loc-btn" id="btn-backup-plik" style="display:none">Pobierz backup (plik)</button></div>
       </div>
 
       <div class="s-karta">
         <div class="s-tytul">Chmury</div>
-
-        <details class="chmura" id="ch-nc" open>
-          <summary><div class="dot">N</div>
-            <div><b>Nextcloud (główna)</b><small>WebDAV na Twoim QNAP</small></div>
-            <span class="ch-strz">▾</span></summary>
-          <div class="chmura-tresc">
-            <input class="f-input" id="nc-url" placeholder="https://agcezar.duckdns.org" autocomplete="off">
-            <input class="f-input" id="nc-path" placeholder="folder na Nextcloud, np. Dysk QNAP WD/FORESTLY BAZA" autocomplete="off">
-            <input class="f-input" id="nc-user" placeholder="login" autocomplete="off">
-            <input class="f-input" id="nc-pass" type="password" placeholder="hasło aplikacji (Ustawienia → Bezpieczeństwo)">
-            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-nc-test">Testuj</button>
-            <button type="button" class="loc-btn" id="btn-nc-save">Zapisz</button></div>
-          </div>
-        </details>
-
-        <details class="chmura" id="ch-pc">
-          <summary><div class="dot">p</div>
-            <div><b>pCloud (kopia)</b><small>token aplikacji</small></div>
-            <span class="ch-strz">▾</span></summary>
-          <div class="chmura-tresc">
-            <input class="f-input" id="pc-token" type="password" placeholder="token pCloud" autocomplete="off">
-            <input class="f-input" id="pc-path" placeholder="/Taksator" autocomplete="off">
-            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-pc-test">Testuj</button>
-            <button type="button" class="loc-btn" id="btn-pc-save">Zapisz</button></div>
-          </div>
-        </details>
-
-        <details class="chmura" id="ch-gd">
-          <summary><div class="dot">G</div>
-            <div><b>Dysk Google (kopia)</b><small>konto serwisowe — klucz JSON</small></div>
-            <span class="ch-strz">▾</span></summary>
-          <div class="chmura-tresc">
-            <input class="f-input" id="gd-json" placeholder='{"type": "service_account", ...}' autocomplete="off">
-            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
-            <button type="button" class="loc-btn" id="btn-gd-save">Zapisz</button></div>
-          </div>
-        </details>
-
-        <div class="s-notka">Chmury można pominąć — aplikacja działa offline, a Excel pobierzesz ręcznie.
-        Dane logowania trzymamy tylko na tym urządzeniu.<br>Pliki lądują w podanym folderze → podfolder
-        z nazwiskiem leśnika (foldery utworzą się same przy pierwszej wysyłce).</div>
+        <div class="s-wiersz"><span>Skonfigurowane</span><b id="s-chmury-status">—</b></div>
+        <button type="button" class="fab szary" id="btn-chmury-ustawienia">☁ Ustawienia chmur</button>
+        <div class="s-notka">Nextcloud (główna, Twój QNAP) + pCloud i Dysk Google jako kopie.
+        Konfiguracja w osobnym oknie — na głównej karcie robi porządek.</div>
       </div>
 
       <div class="s-karta">
@@ -294,6 +256,55 @@
 
 <input type="file" id="plik-backup" accept=".json,application/json" hidden>
 <pre id="testout" style="display:none"></pre>
+
+  <div class="okno" id="okno-chmur">
+    <div class="okno-karta">
+      <div class="okno-naglowek"><b>☁ Ustawienia chmur</b>
+        <button type="button" class="okno-x" id="chmury-zamknij">✕</button></div>
+
+
+        <details class="chmura" id="ch-nc" open>
+          <summary><div class="dot">N</div>
+            <div><b>Nextcloud (główna)</b><small>WebDAV na Twoim QNAP</small></div>
+            <span class="ch-strz">▾</span></summary>
+          <div class="chmura-tresc">
+            <input class="f-input" id="nc-url" placeholder="https://agcezar.duckdns.org" autocomplete="off">
+            <input class="f-input" id="nc-path" placeholder="folder na Nextcloud, np. Dysk QNAP WD/FORESTLY BAZA" autocomplete="off">
+            <input class="f-input" id="nc-user" placeholder="login" autocomplete="off">
+            <input class="f-input" id="nc-pass" type="password" placeholder="hasło aplikacji (Ustawienia → Bezpieczeństwo)">
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-nc-test">Testuj</button>
+            <button type="button" class="loc-btn" id="btn-nc-save">Zapisz</button></div>
+          </div>
+        </details>
+
+        <details class="chmura" id="ch-pc">
+          <summary><div class="dot">p</div>
+            <div><b>pCloud (kopia)</b><small>token aplikacji</small></div>
+            <span class="ch-strz">▾</span></summary>
+          <div class="chmura-tresc">
+            <input class="f-input" id="pc-token" type="password" placeholder="token pCloud" autocomplete="off">
+            <input class="f-input" id="pc-path" placeholder="/Taksator" autocomplete="off">
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-pc-test">Testuj</button>
+            <button type="button" class="loc-btn" id="btn-pc-save">Zapisz</button></div>
+          </div>
+        </details>
+
+        <details class="chmura" id="ch-gd">
+          <summary><div class="dot">G</div>
+            <div><b>Dysk Google (kopia)</b><small>konto serwisowe — klucz JSON</small></div>
+            <span class="ch-strz">▾</span></summary>
+          <div class="chmura-tresc">
+            <input class="f-input" id="gd-json" placeholder='{"type": "service_account", ...}' autocomplete="off">
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
+            <button type="button" class="loc-btn" id="btn-gd-save">Zapisz</button></div>
+          </div>
+        </details>
+
+      <div class="s-notka">Chmury można pominąć — aplikacja działa offline, a Excel pobierzesz ręcznie.
+      Dane logowania trzymamy tylko na tym urządzeniu.<br>Pliki lądują w podanym folderze → podfolder
+      z nazwiskiem leśnika (foldery utworzą się same przy pierwszej wysyłce).</div>
+    </div>
+  </div>
 
 <script src="vendor/xlsx.full.min.js"></script>
 <script src="vendor/leaflet.js"></script>
