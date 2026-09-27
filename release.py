@@ -142,6 +142,20 @@ def main():
     # 0) czy to w ogóle repo gita?
     git("rev-parse", "--verify", "HEAD")
 
+    # 0b) synchronizacja z GitHubem — bez tego push może zostać odrzucony
+    #     (np. gdy coś zmieniono/usunięto bezpośrednio na stronie GitHuba)
+    print("Sprawdzam GitHub (git pull)…")
+    try:
+        git("pull", "--rebase", "--autostash", "origin", "main")
+    except subprocess.CalledProcessError:
+        print()
+        print("✗ NIE MOGĘ POBRAĆ ZMIAN Z GITHUBA — najpewniej konflikt pliku,")
+        print("  który zmieniono na stronie GitHuba, a Ty masz go u siebie.")
+        print("  Co zrobić: w folderze repo usuń lokalnie plik zgłaszany w konflikcie")
+        print("  (zwykle CO-CZYTAJ.txt), potem w tym folderzu uruchom:  git pull")
+        print("  i odpal release.bat jeszcze raz.")
+        sys.exit(1)
+
     # 1) co się zmieniło?
     status = git("status", "--short")
     unpushed = git("log", "--branches", "--not", "--remotes", "--oneline", check=False)
@@ -202,10 +216,10 @@ def main():
     print("-" * 62)
     if "-k" not in sys.argv:
         try:
-            ok = input("\nWypuścić wersję? [t/N]: ").strip().lower()
+            ok = input("\nWypuścić wersję? [T/n] (Enter = TAK): ").strip().lower()
         except EOFError:
-            ok = "n"
-        if ok not in ("t", "tak", "y", "yes"):
+            ok = "t"
+        if ok in ("n", "nie", "no"):
             print("Anulowano — nic nie wysłano.")
             sys.exit(0)
 
@@ -233,3 +247,10 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("\nPrzerwano — nic nie wysłano.")
+    except subprocess.CalledProcessError:
+        print()
+        print("✗ KROK NIE POWIÓDŁ SIĘ — patrz szczegóły wyżej (to ostatnia komenda gita).")
+        print("  Najczęstsza przyczyna: lokalne repo jest w tyle za GitHubem.")
+        print("  Otwórz folder repo w terminalu, uruchom:  git pull")
+        print("  a potem odpal release.bat jeszcze raz. Jeśli push powtórzy się")
+        print("  dwa razy — wklej mi całe okno, poprawimy.")

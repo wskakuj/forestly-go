@@ -1,6 +1,4 @@
-# v1.0.18
+# Co nowego w Forestly GO v1.0.21
 
-fixy
+* fix
 
----
-*wydane z telefonu — ForestlyGO Release*

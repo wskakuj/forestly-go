@@ -60,9 +60,9 @@
 
 
       <div class="f-group">
-        <div class="f-label">Numer wydzielenia <span class="sub">numer dodaje się sam — Enter albo kolejne pole</span></div>
+        <div class="f-label">Numer wydzielenia <span class="sub">numer przyjmuje się, gdy przejdziesz do kolejnego pola</span></div>
         <div class="tag-input">
-          <input class="f-input" id="in-dzialka" placeholder="np. 10, 15/2 (Enter)" autocomplete="off">
+          <input class="f-input" id="in-dzialka" inputmode="numeric" placeholder="np. 10" autocomplete="off">
         </div>
         <div class="chips" id="dzialki-chips"></div>
       </div>
@@ -213,33 +213,42 @@
       <div class="s-karta">
         <div class="s-tytul">Chmury</div>
 
-        <div class="cloud-row">
-          <div class="dot">N</div>
-          <div><b>Nextcloud (główna)</b><small>WebDAV na Twoim QNAP</small></div>
-        </div>
-        <input class="f-input" id="nc-url" placeholder="https://nextcloud.twojadomena.pl" autocomplete="off">
-        <input class="f-input" id="nc-path" placeholder="folder na Nextcloud, np. Dysk QNAP WD/FORESTLY BAZA" autocomplete="off">
-        <input class="f-input" id="nc-user" placeholder="login" autocomplete="off">
-        <input class="f-input" id="nc-pass" type="password" placeholder="hasło aplikacji (Ustawienia → Bezpieczeństwo)">
-        <div class="s-akcje"><button type="button" class="loc-btn" id="btn-nc-test">Testuj</button>
-        <button type="button" class="loc-btn" id="btn-nc-save">Zapisz</button></div>
+        <details class="chmura" id="ch-nc" open>
+          <summary><div class="dot">N</div>
+            <div><b>Nextcloud (główna)</b><small>WebDAV na Twoim QNAP</small></div>
+            <span class="ch-strz">▾</span></summary>
+          <div class="chmura-tresc">
+            <input class="f-input" id="nc-url" placeholder="https://agcezar.duckdns.org" autocomplete="off">
+            <input class="f-input" id="nc-path" placeholder="folder na Nextcloud, np. Dysk QNAP WD/FORESTLY BAZA" autocomplete="off">
+            <input class="f-input" id="nc-user" placeholder="login" autocomplete="off">
+            <input class="f-input" id="nc-pass" type="password" placeholder="hasło aplikacji (Ustawienia → Bezpieczeństwo)">
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-nc-test">Testuj</button>
+            <button type="button" class="loc-btn" id="btn-nc-save">Zapisz</button></div>
+          </div>
+        </details>
 
-        <div class="cloud-row">
-          <div class="dot">p</div>
-          <div><b>pCloud (kopia)</b><small>token aplikacji</small></div>
-        </div>
-        <input class="f-input" id="pc-token" type="password" placeholder="token pCloud" autocomplete="off">
-        <input class="f-input" id="pc-path" placeholder="/Taksator" autocomplete="off">
-        <div class="s-akcje"><button type="button" class="loc-btn" id="btn-pc-test">Testuj</button>
-        <button type="button" class="loc-btn" id="btn-pc-save">Zapisz</button></div>
+        <details class="chmura" id="ch-pc">
+          <summary><div class="dot">p</div>
+            <div><b>pCloud (kopia)</b><small>token aplikacji</small></div>
+            <span class="ch-strz">▾</span></summary>
+          <div class="chmura-tresc">
+            <input class="f-input" id="pc-token" type="password" placeholder="token pCloud" autocomplete="off">
+            <input class="f-input" id="pc-path" placeholder="/Taksator" autocomplete="off">
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-pc-test">Testuj</button>
+            <button type="button" class="loc-btn" id="btn-pc-save">Zapisz</button></div>
+          </div>
+        </details>
 
-        <div class="cloud-row">
-          <div class="dot">G</div>
-          <div><b>Dysk Google (kopia)</b><small>konto serwisowe — klucz JSON</small></div>
-        </div>
-        <input class="f-input" id="gd-json" placeholder='{"type": "service_account", ...}' autocomplete="off">
-        <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
-        <button type="button" class="loc-btn" id="btn-gd-save">Zapisz</button></div>
+        <details class="chmura" id="ch-gd">
+          <summary><div class="dot">G</div>
+            <div><b>Dysk Google (kopia)</b><small>konto serwisowe — klucz JSON</small></div>
+            <span class="ch-strz">▾</span></summary>
+          <div class="chmura-tresc">
+            <input class="f-input" id="gd-json" placeholder='{"type": "service_account", ...}' autocomplete="off">
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
+            <button type="button" class="loc-btn" id="btn-gd-save">Zapisz</button></div>
+          </div>
+        </details>
 
         <div class="s-notka">Chmury można pominąć — aplikacja działa offline, a Excel pobierzesz ręcznie.
         Dane logowania trzymamy tylko na tym urządzeniu.<br>Pliki lądują w podanym folderze → podfolder

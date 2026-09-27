@@ -364,7 +364,8 @@ document.addEventListener("click", e => {
   if (usun) { dzialkiUsun(usun.dataset.dzialkaUsun); return; }
   if (e.target.id === "dzialki-more") { dzialkiRozwinięte = !dzialkiRozwinięte; renderDzialki(); }
 });
-$("#in-dzialka").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); dzialkiDodaj(true); } });
+/* numer wydzielenia: akceptuje się dopiero, gdy dotkniesz czegokolwiek
+   innego (przejście do kolejnego pola, zapis itd.) — bez Enter */
 $("#in-dzialka").addEventListener("blur", () => dzialkiDodaj(false));
 bindInput("#e-wys", "elWys");
 bindInput("#e-pier", "elPier");
@@ -578,6 +579,10 @@ function banerAktualizacji(wersja, url) {
   const a = document.createElement("a");
   a.href = url; a.target = "_blank"; a.rel = "noopener";
   a.textContent = "Pobierz aktualizację";
+  if (NATYWNIE) a.addEventListener("click", e => {
+    e.preventDefault();
+    pobierzIZainstalujApk(url, wersja);
+  });
   a.style.cssText = "color:#fff;font-weight:700;text-decoration:underline;white-space:nowrap";
   const x = document.createElement("button");
   x.textContent = "×"; x.title = "nie teraz";
@@ -642,7 +647,9 @@ async function rysujSync() {
 }
 async function wczytajKonfigChmur() {
   const nc = await DB.metaGet("nextcloud") || {};
-  $("#nc-url").value = nc.url || ""; $("#nc-user").value = nc.user || ""; $("#nc-pass").value = nc.pass || "";
+  $("#nc-url").value = nc.url || "https://agcezar.duckdns.org";
+  $("#nc-user").value = nc.user || "retardino";
+  $("#nc-pass").value = nc.pass || "";
   $("#nc-path").value = (nc.sciezka && nc.sciezka !== "Taksator") ? nc.sciezka : "Dysk QNAP WD/FORESTLY BAZA";
   const pc = await DB.metaGet("pcloud") || {};
   $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
@@ -897,12 +904,10 @@ async function sprawdzAktualizacjeRecznie() {
     }
     if (!url || !apk) { window.open(rel.html_url || "https://github.com/wskakuj/forestly-go/releases/latest", "_blank"); wroc(); return; }
     if (NATYWNIE) {
-      // w aplikacji natywnej: systemowa przeglądarka pobiera APK i proponuje instalację
       localStorage.removeItem("apk_omin");
       const baner = document.getElementById("baner-apk"); if (baner) baner.remove();
-      CLOUDS.log("otwieram pobieranie " + najnowsza + " w przeglądarce");
-      toast("Pobierz ForestlyGO-" + najnowsza + ".apk i zainstaluj (2 dotknięcia)");
-      window.open(url, "_blank");
+      CLOUDS.log("pobieram aktualizację " + najnowsza + " w aplikacji");
+      await pobierzIZainstalujApk(url, najnowsza);
       wroc(); return;
     }
     if (btn) btn.textContent = "Pobieram " + najnowsza + "…";
@@ -936,8 +941,22 @@ async function start() {
     if (ostatniaWies) stan.wies = ostatniaWies;
     przelaczTab("wsie");
   }
-  // lista znanych wsi (podpowiedzi przy wpisywaniu)
   await odswiezListeWsi();
+  // dokończenie instalacji, jeśli była pobrana, a brakowało zgody systemowej
+  const apkCache = localStorage.getItem("apk_cache_uri");
+  if (NATYWNIE && apkCache) {
+    const Akt = window.Capacitor.Plugins.Aktualizacje;
+    const wersjaApk = localStorage.getItem("apk_cache_wersja") || "";
+    if (Akt) {
+      const wyn = await Akt.zainstaluj({ uri: apkCache }).catch(() => null);
+      if (wyn && wyn.wymagaZgody) {
+        /* nadal brak zgody — czekamy na użytkownika */
+      } else {
+        localStorage.removeItem("apk_cache_uri");
+        CLOUDS.log("instalator aktualizacji " + wersjaApk + " gotowy");
+      }
+    }
+  }
   bindOnbKeys();
   odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur(); sprawdzAktualizacjeApk();
   if ("serviceWorker" in navigator && !NATYWNIE) {
@@ -1025,3 +1044,10 @@ if (new URLSearchParams(location.search).get("test")) {
   };
   window.addEventListener("load", () => setTimeout(window.__TEST__, 300));
 }
+
+/* ---------- zakładki chmur: otwarta jedna naraz ---------- */
+document.querySelectorAll(".chmura").forEach(d => {
+  d.addEventListener("toggle", () => {
+    if (d.open) document.querySelectorAll(".chmura").forEach(x => { if (x !== d) x.open = false; });
+  });
+});
