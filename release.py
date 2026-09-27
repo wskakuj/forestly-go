@@ -174,13 +174,17 @@ def main():
     cur = read_current_version()
     remote = latest_remote_tag()
     if remote:
-        base = remote if _vt(remote) >= _vt(cur) else cur
+        # ŹRÓDŁEM PRAWDY jest ostatni tag na GitHubie (wydane wersje).
+        # wersja.js bywa wyprzedzająca (paczką aktualizacyjną) i jej się
+        # tu NIE bierzemy pod uwagę — inaczej numer przeskakuje o 2.
+        base = remote
         print(f"Ostatnia wersja na GitHub  : {remote}")
     else:
         base = cur
         print("(nie udało się odczytać tagów z GitHub — bazuję na wersja.js)")
     prop = next_patch(base) or "v1.0.0"
-    print(f"Aktualna wersja (js/wersja.js): {cur}")
+    print(f"Wersja plików (js/wersja.js): {cur} (tylko informacyjnie — "
+          f"podmienię przy wydaniu)")
     try:
         ans = input(f"Nowa wersja [{prop}]: ").strip() or prop
     except EOFError:

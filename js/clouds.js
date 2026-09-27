@@ -123,13 +123,24 @@ const CLOUDS = (() => {
   }
 
   const _folderIdCache = {};
+  /* Google w odpowiedzi błędu przesyła konkretny powód (reason) — pokazujemy go userowi */
+  async function gdriveBlad(r, kontekst) {
+    let dlaczego = "";
+    try {
+      const d = await r.json();
+      const e = (d.error && d.error.errors || [])[0];
+      dlaczego = e && e.reason ? " — " + e.reason + ": " + (e.message || "") :
+        d.error && d.error.message ? " — " + d.error.message : "";
+    } catch (_) {}
+    return new Error(kontekst + " (HTTP " + r.status + ")" + dlaczego);
+  }
   async function gdriveZnajdzFolder(token, nazwa) {
     const q = "mimeType='application/vnd.google-apps.folder' and name='" +
       String(nazwa).replace(/'/g, "\\'") + "' and trashed=false";
     const r = await fetch("https://www.googleapis.com/drive/v3/files?q=" +
-      encodeURIComponent(q) + "&fields=files(id,name)&pageSize=5",
+      encodeURIComponent(q) + "&fields=files(id,name)&pageSize=5&supportsAllDrives=true&includeItemsFromDrives=true",
       { headers: { Authorization: "Bearer " + token } });
-    if (!r.ok) throw new Error("Dysk Google: nie mogę szukać folderu (HTTP " + r.status + ")");
+    if (!r.ok) throw await gdriveBlad(r, "Dysk Google: nie mogę szukać folderu");
     const d = await r.json();
     return (d.files || [])[0] || null;
   }
@@ -150,12 +161,12 @@ const CLOUDS = (() => {
     czesci.push("--" + granica + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(meta) + "\r\n");
     czesci.push("--" + granica + "\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n");
     const cialo = new Blob([...czesci, blob, "\r\n--" + granica + "--"]);
-    const resp = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+    const resp = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true", {
       method: "POST",
       headers: { Authorization: "Bearer " + token, "Content-Type": "multipart/related; boundary=" + granica },
       body: cialo
     });
-    if (!resp.ok) throw new Error("Dysk Google: HTTP " + resp.status);
+    if (!resp.ok) throw await gdriveBlad(resp, "Dysk Google: wysyłka nieudana");
     return true;
   }
 
@@ -163,7 +174,7 @@ const CLOUDS = (() => {
     const token = await gdriveToken(cfg.sa);
     const resp = await fetch("https://www.googleapis.com/drive/v3/about?fields=user", {
       headers: { Authorization: "Bearer " + token } });
-    if (!resp.ok) throw new Error("Dysk Google: HTTP " + resp.status);
+    if (!resp.ok) throw await gdriveBlad(resp, "Dysk Google");
     const dane = await resp.json();
     const nazwaFolderu = (cfg.folder || "FORESTLY BAZA").trim();
     const f = await gdriveZnajdzFolder(token, nazwaFolderu);
