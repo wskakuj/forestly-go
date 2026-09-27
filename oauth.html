@@ -41,8 +41,10 @@
     akapit("Logowanie nie zostało dokończone (" + blad + ").", "zle");
     akapit("Wróć do aplikacji ForestlyGO i spróbuj ponownie.");
   } else if (kod) {
+    /* próbujemy wrócić do aplikacji ForestlyGO (telefon otworzy ją sam) */
+    location.replace("forestlygo://oauth?code=" + encodeURIComponent(kod));
     akapit("✓ Zalogowano do Google", "ok");
-    akapit("Skopiuj poniższy kod i wróć do aplikacji ForestlyGO:");
+    akapit("Aplikacja ForestlyGO powinna otworzyć się sama. Jeśli tak się nie stało — skopiuj kod poniżej i wklej go w aplikacji:");
     var pole = document.createElement("code");
     pole.textContent = kod;
     el.appendChild(pole);

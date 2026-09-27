@@ -688,7 +688,7 @@ async function wczytajKonfigChmur() {
   const pc = await DB.metaGet("pcloud") || {};
   $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
   const gd = await DB.metaGet("gdrive") || {};
-  $("#gd-client").value = gd.clientId || "";
+  $("#gd-client").value = gd.clientId || GD_CLIENT_ID;
   $("#gd-folder").value = gd.folder || "FORESTLY GO";
 }
 /* instalacja jako aplikacja: Chrome podpowiada, łapiemy i pokazujemy przycisk */
@@ -731,6 +731,25 @@ $("#btn-pc-save").addEventListener("click", async () => {
   toast("pCloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację pCloud");
 });
 /* Dysk Google: logowanie kontem użytkownika (OAuth + PKCE) */
+/* Identyfikator klienta aplikacji ForestlyGO w Google Cloud — wpisany na stałe,
+   pole w ustawieniach wypełnia się samo (można nadpisać własnym). */
+const GD_CLIENT_ID = "1088294990937-jdpqjfio6mqfr3qf47t6iinrpq26camo.apps.googleusercontent.com";
+
+/* Powrót z logowania Google: strona oauth.html otwiera forestlygo://oauth?code=...
+   — Android przywraca aplikację, kod wymieniamy automatycznie, bez wklejania. */
+if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App) {
+  Capacitor.Plugins.App.addListener("appUrlOpen", async (dane) => {
+    try {
+      const url = new URL(dane.url);
+      const kod = url.searchParams.get("code");
+      if (kod) {
+        toast("Wróciłem z logowania Google — łączę…");
+        await gdPolaczKod(kod);
+      }
+    } catch (e) { /* to nie był link logowania — ignorujemy */ }
+  });
+}
+
 /* identyfikator bywa wklejany z "opakowaniem" (http://, cudzysłowy itp.) — czyścimy */
 function gdClientIdZPola() {
   const m = ($("#gd-client").value || "").match(/[\w.-]*apps\.googleusercontent\.com/);
@@ -747,18 +766,29 @@ $("#btn-gd-login").addEventListener("click", async () => {
     toast("Otworzyłem Google — zaloguj się, skopiuj kod i wróć tutaj");
   } catch (e) { toast("Nie mogę otworzyć logowania: " + e.message); }
 });
-$("#btn-gd-kod").addEventListener("click", async () => {
-  const kod = $("#gd-kod").value.trim();
-  if (!kod) { toast("Wklej kod ze strony logowania Google"); return; }
+async function gdPolaczKod(kod) {
   toast("Łączę z Google…");
   try {
     const r = await CLOUDS.gdriveDolaczKod(kod);
     await DB.metaSet("gdrive", { clientId: r.clientId, refreshToken: r.refreshToken,
       folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
     $("#gd-kod").value = "";
-    toast("Połączono z Dyskiem Google ✓ — kliknij Testuj");
+    toast("Połączono z Dyskiem Google ✓");
     CLOUDS.log("<b>Dysk Google</b> — zalogowano kontem Google");
-  } catch (e) { toast(e.message); CLOUDS.log("Google błąd: " + e.message); }
+    /* od razu sprawdzamy, czy wszystko działa — user widzi efekt bez klikania */
+    try {
+      const t = await CLOUDS.gdriveTest({ clientId: r.clientId, refreshToken: r.refreshToken,
+        folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
+      toast("Dysk Google: zalogowany ✓ — folder: " + t.folder);
+      CLOUDS.log("<b>Dysk Google OK</b> — folder: " + t.folder);
+    } catch (e) { toast("Połączono, ale test: " + e.message); }
+    return true;
+  } catch (e) { toast(e.message); CLOUDS.log("Google błąd: " + e.message); return false; }
+}
+$("#btn-gd-kod").addEventListener("click", async () => {
+  const kod = $("#gd-kod").value.trim();
+  if (!kod) { toast("Wklej kod ze strony logowania Google"); return; }
+  await gdPolaczKod(kod);
 });
 $("#btn-gd-save").addEventListener("click", async () => {
   const stary = await DB.metaGet("gdrive") || {};
