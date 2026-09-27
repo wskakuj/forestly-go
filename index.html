@@ -294,9 +294,11 @@
             <div><b>Dysk Google (kopia)</b><small>konto serwisowe — klucz JSON</small></div>
             <span class="ch-strz">▾</span></summary>
           <div class="chmura-tresc">
-            <input class="f-input" id="gd-json" placeholder='{"type": "service_account", ...}' autocomplete="off">
+            <input type="file" id="gd-plik" accept=".json,application/json" hidden>
+            <input class="f-input" id="gd-json" placeholder='{"type": "service_account", ...} — wklej albo wybierz plik' autocomplete="off">
             <input class="f-input" id="gd-folder" placeholder="nazwa folderu na Dysku Google, np. FORESTLY BAZA" autocomplete="off">
-            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-plik">Wybierz plik JSON…</button>
+            <button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
             <button type="button" class="loc-btn" id="btn-gd-save">Zapisz</button></div>
           </div>
         </details>

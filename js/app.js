@@ -730,6 +730,21 @@ $("#btn-pc-save").addEventListener("click", async () => {
   await DB.metaSet("pcloud", { token: $("#pc-token").value.trim(), path: $("#pc-path").value.trim() || "/Taksator" });
   toast("pCloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację pCloud");
 });
+/* Dysk Google: zamiast wklejać — wybierasz plik JSON klucza */
+$("#btn-gd-plik").addEventListener("click", () => $("#gd-plik").click());
+$("#gd-plik").addEventListener("change", async () => {
+  const plik = $("#gd-plik").files[0];
+  $("#gd-plik").value = "";
+  if (!plik) return;
+  try {
+    const sa = JSON.parse(await plik.text());
+    if (!sa.client_email || !sa.private_key) throw new Error("brak client_email/private_key");
+    $("#gd-json").value = JSON.stringify(sa);
+    toast("Wczytano klucz: " + sa.client_email);
+  } catch (e) {
+    toast("To nie jest prawidłowy plik klucza JSON konta serwisowego");
+  }
+});
 $("#btn-gd-save").addEventListener("click", async () => {
   try {
     const sa = JSON.parse($("#gd-json").value);

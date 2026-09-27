@@ -1,4 +1,4 @@
-# Co nowego w Forestly GO v1.0.24
+# Co nowego w Forestly GO v1.0.25
 
-* gdrive implementation
+* gdrive json update
 
