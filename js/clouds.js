@@ -101,7 +101,7 @@ const CLOUDS = (() => {
     const teraz = Math.floor(Date.now() / 1000);
     const naglowek = b64u.enc(JSON.stringify({ alg: "RS256", typ: "JWT" }));
     const claims = b64u.enc(JSON.stringify({
-      iss: sa.client_email, scope: "https://www.googleapis.com/auth/drive.file",
+      iss: sa.client_email, scope: "https://www.googleapis.com/auth/drive",
       aud: "https://oauth2.googleapis.com/token", iat: teraz, exp: teraz + 3600
     }));
     const pem = (sa.private_key || "").replace(/-----[\w ]+-----/g, "").replace(/\s+/g, "");
@@ -122,10 +122,29 @@ const CLOUDS = (() => {
     return dane.access_token;
   }
 
+  const _folderIdCache = {};
+  async function gdriveZnajdzFolder(token, nazwa) {
+    const q = "mimeType='application/vnd.google-apps.folder' and name='" +
+      String(nazwa).replace(/'/g, "\\'") + "' and trashed=false";
+    const r = await fetch("https://www.googleapis.com/drive/v3/files?q=" +
+      encodeURIComponent(q) + "&fields=files(id,name)&pageSize=5",
+      { headers: { Authorization: "Bearer " + token } });
+    if (!r.ok) throw new Error("Dysk Google: nie mogę szukać folderu (HTTP " + r.status + ")");
+    const d = await r.json();
+    return (d.files || [])[0] || null;
+  }
   async function gdriveUpload(cfg, nazwa, blob) {
     const token = await gdriveToken(cfg.sa);
     const meta = { name: nazwa };
-    if (cfg.folderId) meta.parents = [cfg.folderId];
+    const nazwaFolderu = (cfg.folder || "FORESTLY BAZA").trim();
+    let folderId = _folderIdCache[nazwaFolderu];
+    if (!folderId) {
+      const f = await gdriveZnajdzFolder(token, nazwaFolderu);
+      if (!f) throw new Error('Dysk Google: nie widzę folderu "' + nazwaFolderu +
+        '" — udostępnij go (Edytowanie) dla ' + (cfg.sa && cfg.sa.client_email || "konta serwisowego"));
+      folderId = _folderIdCache[nazwaFolderu] = f.id;
+    }
+    meta.parents = [folderId];
     const granica = "taksator" + Date.now();
     const czesci = [];
     czesci.push("--" + granica + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(meta) + "\r\n");
@@ -146,7 +165,13 @@ const CLOUDS = (() => {
       headers: { Authorization: "Bearer " + token } });
     if (!resp.ok) throw new Error("Dysk Google: HTTP " + resp.status);
     const dane = await resp.json();
-    return { ok: true, email: dane.user && dane.user.emailAddress };
+    const nazwaFolderu = (cfg.folder || "FORESTLY BAZA").trim();
+    const f = await gdriveZnajdzFolder(token, nazwaFolderu);
+    if (!f) throw new Error('Konto działa, ale folder "' + nazwaFolderu +
+      '" nie jest mu udostępniony — w Dysku Google kliknij folder → Udostępnij → wklej ' +
+      (cfg.sa && cfg.sa.client_email || "adres konta serwisowego") + " (Edytowanie)");
+    _folderIdCache[nazwaFolderu] = f.id;
+    return { ok: true, email: dane.user && dane.user.emailAddress, folder: nazwaFolderu };
   }
 
   /* ---------- SYNCHRONIZACJA ---------- */

@@ -689,6 +689,7 @@ async function wczytajKonfigChmur() {
   $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
   const gd = await DB.metaGet("gdrive") || {};
   $("#gd-json").value = gd.sa ? JSON.stringify(gd.sa) : "";
+  $("#gd-folder").value = gd.folder || "FORESTLY BAZA";
 }
 /* instalacja jako aplikacja: Chrome podpowiada, łapiemy i pokazujemy przycisk */
 let odroczonaInstalacja = null;
@@ -733,8 +734,9 @@ $("#btn-gd-save").addEventListener("click", async () => {
   try {
     const sa = JSON.parse($("#gd-json").value);
     if (!sa.client_email || !sa.private_key) throw new Error("brak client_email/private_key");
-    await DB.metaSet("gdrive", { sa });
-    toast("Dysk Google zapisany"); CLOUDS.log("<b>zapisano</b> konto serwisowe Google");
+    await DB.metaSet("gdrive", { sa, folder: $("#gd-folder").value.trim() || "FORESTLY BAZA" });
+    toast("Dysk Google zapisany"); CLOUDS.log("<b>zapisano</b> konto serwisowe Google — folder: " +
+      ($("#gd-folder").value.trim() || "FORESTLY BAZA"));
   } catch (e) { toast("To nie wygląda na klucz JSON konta serwisowego"); }
 });
 $("#btn-nc-test").addEventListener("click", async () => {
@@ -755,9 +757,9 @@ $("#btn-gd-test").addEventListener("click", async () => {
   try {
     const sa = JSON.parse($("#gd-json").value);
     toast("Podpisuję JWT i łączę z Google…");
-    const r = await CLOUDS.gdriveTest({ sa });
-    toast("Dysk Google: OK ✓ (" + (r.email || "konto serwisowe") + ")");
-    CLOUDS.log("<b>Dysk Google OK</b> — " + (r.email || ""));
+    const r = await CLOUDS.gdriveTest({ sa, folder: $("#gd-folder").value.trim() || "FORESTLY BAZA" });
+    toast("Dysk Google: OK ✓ — folder: " + r.folder);
+    CLOUDS.log("<b>Dysk Google OK</b> — " + (r.email || "") + ", folder: " + r.folder);
   } catch (e) { toast(e.message); CLOUDS.log("Google błąd: " + e.message); }
 });
 async function odswiezBackupKarte() {
