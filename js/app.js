@@ -688,8 +688,8 @@ async function wczytajKonfigChmur() {
   const pc = await DB.metaGet("pcloud") || {};
   $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
   const gd = await DB.metaGet("gdrive") || {};
-  $("#gd-json").value = gd.sa ? JSON.stringify(gd.sa) : "";
-  $("#gd-folder").value = gd.folder || "FORESTLY BAZA";
+  $("#gd-client").value = gd.clientId || "";
+  $("#gd-folder").value = gd.folder || "FORESTLY GO";
 }
 /* instalacja jako aplikacja: Chrome podpowiada, łapiemy i pokazujemy przycisk */
 let odroczonaInstalacja = null;
@@ -730,29 +730,35 @@ $("#btn-pc-save").addEventListener("click", async () => {
   await DB.metaSet("pcloud", { token: $("#pc-token").value.trim(), path: $("#pc-path").value.trim() || "/Taksator" });
   toast("pCloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację pCloud");
 });
-/* Dysk Google: zamiast wklejać — wybierasz plik JSON klucza */
-$("#btn-gd-plik").addEventListener("click", () => $("#gd-plik").click());
-$("#gd-plik").addEventListener("change", async () => {
-  const plik = $("#gd-plik").files[0];
-  $("#gd-plik").value = "";
-  if (!plik) return;
+/* Dysk Google: logowanie kontem użytkownika (OAuth + PKCE) */
+$("#btn-gd-login").addEventListener("click", async () => {
+  const clientId = $("#gd-client").value.trim();
+  if (!clientId.includes("googleusercontent.com")) { toast("Wklej najpierw identyfikator klienta OAuth"); return; }
   try {
-    const sa = JSON.parse(await plik.text());
-    if (!sa.client_email || !sa.private_key) throw new Error("brak client_email/private_key");
-    $("#gd-json").value = JSON.stringify(sa);
-    toast("Wczytano klucz: " + sa.client_email);
-  } catch (e) {
-    toast("To nie jest prawidłowy plik klucza JSON konta serwisowego");
-  }
+    const url = await CLOUDS.gdriveLoginUrl(clientId);
+    window.open(url, "_blank");
+    toast("Otworzyłem Google — zaloguj się, skopiuj kod i wróć tutaj");
+  } catch (e) { toast("Nie mogę otworzyć logowania: " + e.message); }
+});
+$("#btn-gd-kod").addEventListener("click", async () => {
+  const kod = $("#gd-kod").value.trim();
+  if (!kod) { toast("Wklej kod ze strony logowania Google"); return; }
+  toast("Łączę z Google…");
+  try {
+    const r = await CLOUDS.gdriveDolaczKod(kod);
+    await DB.metaSet("gdrive", { clientId: r.clientId, refreshToken: r.refreshToken,
+      folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
+    $("#gd-kod").value = "";
+    toast("Połączono z Dyskiem Google ✓ — kliknij Testuj");
+    CLOUDS.log("<b>Dysk Google</b> — zalogowano kontem Google");
+  } catch (e) { toast(e.message); CLOUDS.log("Google błąd: " + e.message); }
 });
 $("#btn-gd-save").addEventListener("click", async () => {
-  try {
-    const sa = JSON.parse($("#gd-json").value);
-    if (!sa.client_email || !sa.private_key) throw new Error("brak client_email/private_key");
-    await DB.metaSet("gdrive", { sa, folder: $("#gd-folder").value.trim() || "FORESTLY BAZA" });
-    toast("Dysk Google zapisany"); CLOUDS.log("<b>zapisano</b> konto serwisowe Google — folder: " +
-      ($("#gd-folder").value.trim() || "FORESTLY BAZA"));
-  } catch (e) { toast("To nie wygląda na klucz JSON konta serwisowego"); }
+  const stary = await DB.metaGet("gdrive") || {};
+  await DB.metaSet("gdrive", { clientId: $("#gd-client").value.trim(),
+    refreshToken: stary.refreshToken, folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
+  toast("Dysk Google zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Dysku Google — folder: " +
+    ($("#gd-folder").value.trim() || "FORESTLY GO"));
 });
 $("#btn-nc-test").addEventListener("click", async () => {
   const cfg = { url: $("#nc-url").value.trim(), user: $("#nc-user").value.trim(), pass: $("#nc-pass").value };
@@ -769,12 +775,15 @@ $("#btn-pc-test").addEventListener("click", async () => {
   catch (e) { toast(e.message); CLOUDS.log("pCloud błąd: " + e.message); }
 });
 $("#btn-gd-test").addEventListener("click", async () => {
+  const stary = await DB.metaGet("gdrive") || {};
+  const cfg = { clientId: $("#gd-client").value.trim() || stary.clientId,
+    refreshToken: stary.refreshToken, folder: $("#gd-folder").value.trim() || "FORESTLY GO" };
+  if (!cfg.clientId || !cfg.refreshToken) { toast("Najpierw zaloguj się z Google"); return; }
+  toast("Łączę z Dyskiem Google…");
   try {
-    const sa = JSON.parse($("#gd-json").value);
-    toast("Podpisuję JWT i łączę z Google…");
-    const r = await CLOUDS.gdriveTest({ sa, folder: $("#gd-folder").value.trim() || "FORESTLY BAZA" });
+    const r = await CLOUDS.gdriveTest(cfg);
     toast("Dysk Google: OK ✓ — folder: " + r.folder);
-    CLOUDS.log("<b>Dysk Google OK</b> — " + (r.email || "") + ", folder: " + r.folder);
+    CLOUDS.log("<b>Dysk Google OK</b> — folder: " + r.folder);
   } catch (e) { toast(e.message); CLOUDS.log("Google błąd: " + e.message); }
 });
 async function odswiezBackupKarte() {

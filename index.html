@@ -291,13 +291,14 @@
 
         <details class="chmura" id="ch-gd">
           <summary><div class="dot">G</div>
-            <div><b>Dysk Google (kopia)</b><small>konto serwisowe — klucz JSON</small></div>
+            <div><b>Dysk Google (kopia)</b><small>logowanie Twoim kontem Google</small></div>
             <span class="ch-strz">▾</span></summary>
           <div class="chmura-tresc">
-            <input type="file" id="gd-plik" accept=".json,application/json" hidden>
-            <input class="f-input" id="gd-json" placeholder='{"type": "service_account", ...} — wklej albo wybierz plik' autocomplete="off">
-            <input class="f-input" id="gd-folder" placeholder="nazwa folderu na Dysku Google, np. FORESTLY BAZA" autocomplete="off">
-            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-plik">Wybierz plik JSON…</button>
+            <input class="f-input" id="gd-client" placeholder="Identyfikator klienta OAuth (…apps.googleusercontent.com)" autocomplete="off">
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-login">Zaloguj z Google…</button></div>
+            <input class="f-input" id="gd-kod" placeholder="tu wklej kod ze strony logowania Google" autocomplete="off">
+            <input class="f-input" id="gd-folder" placeholder="nazwa folderu na Twoim Dysku Google, np. FORESTLY GO" autocomplete="off">
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-kod">Połącz</button>
             <button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
             <button type="button" class="loc-btn" id="btn-gd-save">Zapisz</button></div>
           </div>

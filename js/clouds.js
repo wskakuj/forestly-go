@@ -96,29 +96,72 @@ const CLOUDS = (() => {
     return { ok: true, email: dane.email };
   }
 
-  /* ---------- DYSK GOOGLE (konto serwisowe, JWT RS256) ---------- */
-  async function gdriveToken(sa) {
-    const teraz = Math.floor(Date.now() / 1000);
-    const naglowek = b64u.enc(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-    const claims = b64u.enc(JSON.stringify({
-      iss: sa.client_email, scope: "https://www.googleapis.com/auth/drive",
-      aud: "https://oauth2.googleapis.com/token", iat: teraz, exp: teraz + 3600
-    }));
-    const pem = (sa.private_key || "").replace(/-----[\w ]+-----/g, "").replace(/\s+/g, "");
-    const der = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
-    const klucz = await crypto.subtle.importKey("pkcs8", der,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
-    const sygn = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", klucz,
-      new TextEncoder().encode(naglowek + "." + claims));
-    const jwt = naglowek + "." + claims + "." +
-      btoa(String.fromCharCode(...new Uint8Array(sygn))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  /* ---------- DYSK GOOGLE (OAuth — konto użytkownika, PKCE) ----------
+     Konta serwisowe nie mają miejsca na dane (storageQuotaExceeded),
+     więc logujemy się kontem użytkownika: pliki należą do niego,
+     a aplikacja sama tworzy swój folder na jego Dysku. */
+  const GD_REDIRECT = "https://wskakuj.github.io/forestly-go/oauth.html";
+  const GD_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
-    const odp = await fetch("https://oauth2.googleapis.com/token", {
+  /* base64url z SUROWYCH BAJTÓW (b64u.enc koduje tekst przez UTF-8 — to nie to) */
+  function gdB64u(bajty) {
+    return btoa(String.fromCharCode(...bajty))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function gdLos(n) {
+    const b = new Uint8Array(n); crypto.getRandomValues(b);
+    return gdB64u(b);
+  }
+  async function gdSha256b64u(txt) {
+    const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+    return gdB64u(new Uint8Array(d));
+  }
+
+  /* krok 1: otwiera w przeglądarce stronę logowania Google */
+  async function gdriveLoginUrl(clientId) {
+    const verifier = gdLos(64);
+    localStorage.setItem("gd_pkce", JSON.stringify({ clientId, verifier, t: Date.now() }));
+    const challenge = await gdSha256b64u(verifier);
+    return "https://accounts.google.com/o/oauth2/v2/auth?client_id=" + encodeURIComponent(clientId) +
+      "&redirect_uri=" + encodeURIComponent(GD_REDIRECT) +
+      "&response_type=code&scope=" + encodeURIComponent(GD_SCOPE) +
+      "&access_type=offline&prompt=consent" +
+      "&code_challenge=" + encodeURIComponent(challenge) + "&code_challenge_method=S256";
+  }
+
+  function gdOpisBledu(dane) {
+    return dane.error_description ||
+      (typeof dane.error === "string" ? dane.error : (dane.error && dane.error.message)) || "?";
+  }
+
+  /* krok 2: kod z przeglądarki wymieniamy na trwały refresh token */
+  async function gdriveDolaczKod(kod) {
+    const pkce = JSON.parse(localStorage.getItem("gd_pkce") || "null");
+    if (!pkce) throw new Error("najpierw kliknij „Zaloguj z Google…” — sesja logowania wygasła");
+    const resp = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" + jwt
+      body: "code=" + encodeURIComponent(kod.trim()) +
+        "&client_id=" + encodeURIComponent(pkce.clientId) +
+        "&code_verifier=" + encodeURIComponent(pkce.verifier) +
+        "&grant_type=authorization_code&redirect_uri=" + encodeURIComponent(GD_REDIRECT)
     });
-    const dane = await odp.json();
-    if (!dane.access_token) throw new Error("Google: nie udało się pobrać tokenu (" + (dane.error_description || dane.error) + ")");
+    const dane = await resp.json();
+    if (!dane.refresh_token) throw new Error("Google nie wydał tokenu (" +
+      gdOpisBledu(dane) + ") — spróbuj zalogować się ponownie");
+    localStorage.removeItem("gd_pkce");
+    return { clientId: pkce.clientId, refreshToken: dane.refresh_token };
+  }
+
+  /* token dostępu (odświeżany z refresh tokenu) */
+  async function gdriveToken(cfg) {
+    const resp = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "grant_type=refresh_token&client_id=" + encodeURIComponent(cfg.clientId) +
+        "&refresh_token=" + encodeURIComponent(cfg.refreshToken)
+    });
+    const dane = await resp.json();
+    if (!dane.access_token) throw new Error("Dysk Google: wygasło logowanie — zaloguj się z Google ponownie (" +
+      gdOpisBledu(dane) + ")");
     return dane.access_token;
   }
 
@@ -134,28 +177,32 @@ const CLOUDS = (() => {
     } catch (_) {}
     return new Error(kontekst + " (HTTP " + r.status + ")" + dlaczego);
   }
-  async function gdriveZnajdzFolder(token, nazwa) {
+
+  /* szuka folderu aplikacji; jak nie ma — tworzy (folder należy do usera) */
+  async function gdriveFolderId(token, nazwa) {
+    if (_folderIdCache[nazwa]) return _folderIdCache[nazwa];
     const q = "mimeType='application/vnd.google-apps.folder' and name='" +
       String(nazwa).replace(/'/g, "\\'") + "' and trashed=false";
     const r = await fetch("https://www.googleapis.com/drive/v3/files?q=" +
-      encodeURIComponent(q) + "&fields=files(id,name)&pageSize=5&supportsAllDrives=true&includeItemsFromDrives=true",
+      encodeURIComponent(q) + "&fields=files(id,name)&pageSize=5",
       { headers: { Authorization: "Bearer " + token } });
     if (!r.ok) throw await gdriveBlad(r, "Dysk Google: nie mogę szukać folderu");
-    const d = await r.json();
-    return (d.files || [])[0] || null;
+    const f = ((await r.json()).files || [])[0];
+    if (f) return _folderIdCache[nazwa] = f.id;
+    const tw = await fetch("https://www.googleapis.com/drive/v3/files?fields=id", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: nazwa, mimeType: "application/vnd.google-apps.folder" })
+    });
+    if (!tw.ok) throw await gdriveBlad(tw, "Dysk Google: nie mogę utworzyć folderu");
+    return _folderIdCache[nazwa] = (await tw.json()).id;
   }
+
   async function gdriveUpload(cfg, nazwa, blob) {
-    const token = await gdriveToken(cfg.sa);
+    const token = await gdriveToken(cfg);
     const meta = { name: nazwa };
-    const nazwaFolderu = (cfg.folder || "FORESTLY BAZA").trim();
-    let folderId = _folderIdCache[nazwaFolderu];
-    if (!folderId) {
-      const f = await gdriveZnajdzFolder(token, nazwaFolderu);
-      if (!f) throw new Error('Dysk Google: nie widzę folderu "' + nazwaFolderu +
-        '" — udostępnij go (Edytowanie) dla ' + (cfg.sa && cfg.sa.client_email || "konta serwisowego"));
-      folderId = _folderIdCache[nazwaFolderu] = f.id;
-    }
-    meta.parents = [folderId];
+    const nazwaFolderu = (cfg.folder || "FORESTLY GO").trim();
+    meta.parents = [await gdriveFolderId(token, nazwaFolderu)];
     const granica = "taksator" + Date.now();
     const czesci = [];
     czesci.push("--" + granica + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(meta) + "\r\n");
@@ -171,19 +218,12 @@ const CLOUDS = (() => {
   }
 
   async function gdriveTest(cfg) {
-    const token = await gdriveToken(cfg.sa);
-    const resp = await fetch("https://www.googleapis.com/drive/v3/about?fields=user", {
-      headers: { Authorization: "Bearer " + token } });
-    if (!resp.ok) throw await gdriveBlad(resp, "Dysk Google");
-    const dane = await resp.json();
-    const nazwaFolderu = (cfg.folder || "FORESTLY BAZA").trim();
-    const f = await gdriveZnajdzFolder(token, nazwaFolderu);
-    if (!f) throw new Error('Konto działa, ale folder "' + nazwaFolderu +
-      '" nie jest mu udostępniony — w Dysku Google kliknij folder → Udostępnij → wklej ' +
-      (cfg.sa && cfg.sa.client_email || "adres konta serwisowego") + " (Edytowanie)");
-    _folderIdCache[nazwaFolderu] = f.id;
-    return { ok: true, email: dane.user && dane.user.emailAddress, folder: nazwaFolderu };
+    const token = await gdriveToken(cfg);
+    const nazwaFolderu = (cfg.folder || "FORESTLY GO").trim();
+    const folderId = await gdriveFolderId(token, nazwaFolderu);
+    return { ok: true, folder: nazwaFolderu, folderId };
   }
+
 
   /* ---------- SYNCHRONIZACJA ---------- */
   /* Wysyła plik jednej wsi na wszystkie skonfigurowane chmury.
@@ -239,6 +279,7 @@ const CLOUDS = (() => {
 
   return {
     nextcloudTest, pcloudTest, gdriveTest,
+    gdriveLoginUrl, gdriveDolaczKod,
     wyslijPlik, synchronizujWies, kolejkaInfo, log
   };
 })();

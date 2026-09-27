@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ForestlyGO — logowanie Google</title>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;background:#1c2333;color:#e8ecf5;
+       display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+  .karta{background:#26304a;padding:28px;border-radius:14px;max-width:440px;width:90%;
+         box-shadow:0 8px 30px rgba(0,0,0,.45);text-align:center}
+  h2{margin:0 0 6px}
+  code{display:block;background:#171d2e;padding:14px;border-radius:8px;word-break:break-all;
+       margin:14px 0;font-size:13px;user-select:all;text-align:left}
+  button{background:#2A468B;color:#fff;border:0;border-radius:8px;padding:12px 22px;
+         font-size:15px;width:100%;cursor:pointer}
+  .ok{color:#7fe08c}.zle{color:#ff8a8a}
+  small{color:#9fb0cc}
+</style>
+</head>
+<body>
+<div class="karta">
+  <h2>ForestlyGO</h2>
+  <div id="tresc"><p>Ładowanie…</p></div>
+</div>
+<script>
+(function () {
+  var p = new URLSearchParams(location.search);
+  var el = document.getElementById("tresc");
+  el.textContent = "";
+  var blad = p.get("error");
+  var kod = p.get("code");
+  function akapit(txt, klasa) {
+    var e = document.createElement("p");
+    if (klasa) e.className = klasa;
+    e.textContent = txt;
+    el.appendChild(e);
+    return e;
+  }
+  if (blad) {
+    akapit("Logowanie nie zostało dokończone (" + blad + ").", "zle");
+    akapit("Wróć do aplikacji ForestlyGO i spróbuj ponownie.");
+  } else if (kod) {
+    akapit("✓ Zalogowano do Google", "ok");
+    akapit("Skopiuj poniższy kod i wróć do aplikacji ForestlyGO:");
+    var pole = document.createElement("code");
+    pole.textContent = kod;
+    el.appendChild(pole);
+    var b = document.createElement("button");
+    b.textContent = "Skopiuj kod";
+    b.onclick = function () {
+      (navigator.clipboard ? navigator.clipboard.writeText(kod) : Promise.reject())
+        .then(function () { b.textContent = "Skopiowano ✓"; })
+        .catch(function () { akapit("Zaznacz kod powyżej i skopiuj go ręcznie.", "zle"); });
+    };
+    el.appendChild(b);
+  } else {
+    akapit("To strona zwrotna logowania ForestlyGO.", "zle");
+    akapit("Otwórz ją, klikając „Zaloguj z Google…” w aplikacji.");
+  }
+})();
+</script>
+</body>
+</html>
