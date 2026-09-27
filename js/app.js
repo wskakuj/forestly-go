@@ -91,6 +91,15 @@ let onbKrok = 0;
    w karcie aplikacji — od razu pokazujemy tryb pobierania plików */
 const MOBILNY = /Android|iPhone|iPad/i.test(navigator.userAgent);
 const FOLDER_MOZLIWY = !!window.showDirectoryPicker && !MOBILNY && !NATYWNIE;
+/* natywny wybór folderu (Android, wtyczka Pliki) — działa też bez File System Access API */
+const FOLDER_NATYWNY = NATYWNIE && window.Capacitor && Capacitor.Plugins && !!Capacitor.Plugins.Pliki;
+async function wybierzFolder() {
+  if (FOLDER_NATYWNY) {
+    const r = await Capacitor.Plugins.Pliki.wybierzFolder();
+    return { uri: r.uri, nazwa: r.nazwa, natywny: true };
+  }
+  return await pokazDialogFolderu();
+}
 
 function renderOnb() {
   const kroki = ["Leśnik", "Folder na telefonie", "Chmury"];
@@ -103,7 +112,7 @@ function renderOnb() {
       <button type="button" class="fab" id="onb-dalej" style="margin-top:10px">Dalej →</button>
       <button type="button" class="fab szary" id="onb-przywroc" style="margin-top:8px">Mam backup — przywróć sesję</button>`);
   } else if (onbKrok === 1) {
-    if (FOLDER_MOZLIWY) {
+    if (FOLDER_MOZLIWY || FOLDER_NATYWNY) {
       html.push(`<h3>Gdzie zapisywać pliki?</h3>
         <p>Wskaż folder na tym urządzeniu — Excel z opisami będzie tam widoczny także dla innych aplikacji.</p>
         <button type="button" class="fab" id="onb-folder">Wybierz folder</button>
@@ -158,7 +167,7 @@ function renderOnb() {
     if (!$("#onb-folder")) { $("#onb-folder-pomin").addEventListener("click", () => { onbKrok = 2; renderOnb(); }); return; }
     $("#onb-folder").addEventListener("click", async () => {
       try {
-        const dir = await pokazDialogFolderu();
+        const dir = await wybierzFolder();
         await DB.metaSet("folder", dir);
         const r = await SESJA.przywroc(dir);
         if (r.ok) {
@@ -678,9 +687,9 @@ async function rysujSync() {
   const autor = await DB.metaGet("autor");
   $("#s-autor").textContent = autor || "—";
   const dir = await DB.metaGet("folder");
-  $("#s-folder").textContent = dir ? dir.name : "nie wybrano";
+  $("#s-folder").textContent = dir ? (dir.nazwa || dir.name) : "nie wybrano";
   $("#btn-folder").textContent = dir ? "Zmień folder" : "Wybierz folder";
-  $("#btn-folder").style.display = FOLDER_MOZLIWY ? "" : "none";
+  $("#btn-folder").style.display = (FOLDER_MOZLIWY || FOLDER_NATYWNY) ? "" : "none";
   $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?");
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
@@ -735,9 +744,9 @@ document.addEventListener("click", async e => {
 });
 $("#btn-folder").addEventListener("click", async () => {
   try {
-    const dir = await pokazDialogFolderu();
+    const dir = await wybierzFolder();
     await DB.metaSet("folder", dir);
-    toast("Folder zapisany: " + dir.name);
+    toast("Folder zapisany: " + (dir.nazwa || dir.name));
     rysujSync();
   } catch (e) { toast("Nie udało się wybrać folderu"); }
 });
@@ -856,9 +865,9 @@ $("#btn-backup-plik").addEventListener("click", async () => {
 /* jedno przywracanie: na komputerze wskazujesz folder, na telefonie
    od razu plik backupu (Android nie umie wskazywać folderów) */
 $("#btn-backup-przywroc").addEventListener("click", async () => {
-  if (window.showDirectoryPicker) {
+  if (window.showDirectoryPicker || FOLDER_NATYWNY) {
     try {
-      const dir = await pokazDialogFolderu();
+      const dir = await wybierzFolder();
       await DB.metaSet("folder", dir);
       const r = await SESJA.przywroc(dir);
       if (!r.ok) { toast("W tym folderze nie ma pliku backupu"); return; }

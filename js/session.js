@@ -38,7 +38,18 @@ const SESJA = (() => {
       if (!dane.autor) return { ok: false, powod: "brak autora" };
       let wynik = { ok: false, powod: "brak folderu", ile: dane.wpisy.length };
       handle = handle || await DB.metaGet("folder");
-      if (handle && handle.getFileHandle) {
+      if (handle && handle.uri && window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Pliki) {
+        /* natywny zapis backupu przez SAF (wtyczka Pliki) */
+        try {
+          const nazwa = PREFIKS + czysc(dane.autor) + ".json";
+          const json = JSON.stringify(dane, null, 1);
+          const b = new TextEncoder().encode(json);
+          let s = ""; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+          await Capacitor.Plugins.Pliki.zapisz({ uri: handle.uri, nazwa,
+            mime: "application/json", dane: btoa(s) });
+          wynik = { ok: true, ile: dane.wpisy.length, nazwa, folder: true };
+        } catch (e) { /* zostaje OPFS */ }
+      } else if (handle && handle.getFileHandle) {
         try {
           const fh = await handle.getFileHandle(PREFIKS + czysc(dane.autor) + ".json", { create: true });
           const w = await fh.createWritable();
@@ -100,6 +111,21 @@ const SESJA = (() => {
   }
 
   async function odczytaj(handle) {
+    /* natywnie: szukamy pliku backupu w folderze SAF */
+    if (handle && handle.uri && window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Pliki) {
+      try {
+        const r = await Capacitor.Plugins.Pliki.lista({ uri: handle.uri });
+        const nazwa = (r.pliki || []).find(n => n && n.startsWith(PREFIKS) && n.endsWith(".json"));
+        if (!nazwa) return null;
+        const o = await Capacitor.Plugins.Pliki.odczytaj({ uri: handle.uri, nazwa });
+        const bin = atob(o.dane);
+        const a = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+        const dane = JSON.parse(new TextDecoder().decode(a));
+        if (!dane || !Array.isArray(dane.wpisy)) return null;
+        return dane;
+      } catch (e) { return null; }
+    }
     const fh = await znajdzPlik(handle);
     if (!fh) return null;
     try {

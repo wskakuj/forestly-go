@@ -59,6 +59,21 @@ const XLSXIO = (() => {
     const blob = await blobZwpisow(wpisy);
     const nazwa = nazwaPliku(wies, autor);
     const dir = await DB.metaGet("folder");
+    if (dir && dir.uri && window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Pliki) {
+      /* natywny zapis przez SAF (wtyczka Pliki) */
+      try {
+        const dane = await new Promise((ok, blad) => {
+          const fr = new FileReader();
+          fr.onload = () => ok(String(fr.result).split(",")[1] || "");
+          fr.onerror = blad;
+          fr.readAsDataURL(blob);
+        });
+        await Capacitor.Plugins.Pliki.zapisz({
+          uri: dir.uri, nazwa,
+          mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", dane });
+        return { ok: true, folder: true, nazwa };
+      } catch (e) { /* odmowa/błąd — spadamy do zapiszPlik */ }
+    }
     if (dir && dir.queryPermission) {
       try {
         let perm = await dir.queryPermission({ mode: "readwrite" });
