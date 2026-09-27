@@ -757,9 +757,25 @@ $("#btn-nc-save").addEventListener("click", async () => {
     ($("#nc-path").value.trim() ? " — folder: " + $("#nc-path").value.trim() : ""));
   rysujSync();
 });
+$("#btn-pc-zaloguj").addEventListener("click", async () => {
+  try {
+    const r = await CLOUDS.pcloudZaloguj($("#pc-email").value.trim(), $("#pc-pass").value);
+    await DB.metaSet("pcloud", { token: r.token, email: r.email,
+      path: $("#pc-path").value.trim() || "/FORESTLY BAZA" });
+    $("#pc-pass").value = "";
+    toast("Zalogowano do pCloud ✓ (" + r.email + ")");
+    CLOUDS.log("<b>zalogowano</b> do pCloud — " + r.email +
+      ", folder: " + ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
+    rysujSync();
+  } catch (e) { toast(String(e.message || e)); }
+});
 $("#btn-pc-save").addEventListener("click", async () => {
-  await DB.metaSet("pcloud", { token: $("#pc-token").value.trim(), path: $("#pc-path").value.trim() || "/Taksator" });
-  toast("pCloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację pCloud");
+  const stara = await DB.metaGet("pcloud") || {};
+  if (!stara.token) { toast("Najpierw zaloguj się do pCloud"); return; }
+  await DB.metaSet("pcloud", { token: stara.token, email: stara.email,
+    path: $("#pc-path").value.trim() || "/FORESTLY BAZA" });
+  toast("Folder zapisany"); CLOUDS.log("<b>zapisano</b> folder pCloud: " +
+    ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
   rysujSync();
 });
 /* Dysk Google: logowanie kontem użytkownika (OAuth + PKCE) */

@@ -74,10 +74,34 @@ const CLOUDS = (() => {
   }
 
   /* ---------- PCLOUD ---------- */
+  /* logowanie hasłem (digest — hasło nie leci jawnie): zwraca token + e-mail */
+  async function pcloudZaloguj(email, haslo) {
+    if (!email || !haslo) throw new Error("podaj e-mail i hasło pCloud");
+    const sha1hex = async t => {
+      const d = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(t));
+      return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("");
+    };
+    /* 1) sól */
+    const r1 = await fetch("https://api.pcloud.com/getdigest?username=" + encodeURIComponent(email));
+    const d1 = await r1.json().catch(() => ({}));
+    if (!d1.digest) throw new Error("pCloud: " + (d1.error || "serwer nie odpowiedział (sprawdź e-mail)"));
+    /* 2) passworddigest = sha1(haslo + sha1(login_małymi) + digest) */
+    const login = email.trim().toLowerCase();
+    const pd = await sha1hex(haslo + await sha1hex(login) + d1.digest);
+    /* 3) logowanie — dostajemy token (auth) ważny 2 lata */
+    const r2 = await fetch("https://api.pcloud.com/userinfo?getauth=1&logout=1&authexpire=63072000" +
+      "&username=" + encodeURIComponent(login) +
+      "&digest=" + encodeURIComponent(d1.digest) +
+      "&passworddigest=" + encodeURIComponent(pd));
+    const d2 = await r2.json().catch(() => ({}));
+    if (d2.result !== 0) throw new Error("pCloud: " + (d2.error || "błąd logowania (" + d2.result + ")"));
+    if (!d2.auth) throw new Error("pCloud: serwer nie zwrócił tokenu");
+    return { token: d2.auth, email: d2.email };
+  }
   async function pcloudUpload(cfg, nazwa, blob) {
     const sciezka = cfg.path || "/Taksator";
     const autor = await sciezkaAutor();
-    const url = "https://api.pcloud.com/uploadfile?access_token=" + encodeURIComponent(cfg.token) +
+    const url = "https://api.pcloud.com/uploadfile?auth=" + encodeURIComponent(cfg.token) +
       "&path=" + encodeURIComponent(ukosnik(sciezka) + autor) + "&filename=" + encodeURIComponent(nazwa) +
       "&nopartial=1";
     const fd = new FormData();
@@ -90,7 +114,7 @@ const CLOUDS = (() => {
   function ukosnik(p) { return p.endsWith("/") ? p : p + "/"; }
 
   async function pcloudTest(cfg) {
-    const resp = await fetch("https://api.pcloud.com/userinfo?access_token=" + encodeURIComponent(cfg.token));
+    const resp = await fetch("https://api.pcloud.com/userinfo?auth=" + encodeURIComponent(cfg.token));
     const dane = await resp.json().catch(() => ({}));
     if (dane.result !== 0) throw new Error("pCloud: " + (dane.error || "błąd " + dane.result));
     return { ok: true, email: dane.email };
@@ -315,7 +339,7 @@ const CLOUDS = (() => {
   }
 
   return {
-    nextcloudTest, pcloudTest, gdriveTest,
+    nextcloudTest, pcloudTest, gdriveTest, pcloudZaloguj,
     gdriveLoginUrl, gdriveDolaczKod,
     wyslijPlik, synchronizujWies, kolejkaInfo, log
   };
