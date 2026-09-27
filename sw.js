@@ -1,7 +1,7 @@
 /* Taksator terenowy — service worker: powłoka aplikacji offline + kafle mapy */
-const WERSJA = "forestlygo-v21";
+const WERSJA = "forestlygo-v22";
 const SZKIELET = [
-  "./", "./index.html", "./oauth.html",
+  "./", "./index.html", "./oauth.html", "./polityka-prywatnosci.html",
   "./manifest.webmanifest",
   "./css/app.css",
   "./js/db.js", "./js/optax.js", "./js/xlsx-io.js", "./js/clouds.js", "./js/session.js", "./js/wersja.js", "./js/pliki.js", "./js/app.js",
