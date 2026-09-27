@@ -211,7 +211,7 @@
 
       <div class="s-karta">
         <div class="s-tytul">Chmury</div>
-        <div class="s-wiersz"><span>Skonfigurowane</span><b id="s-chmury-status">—</b></div>
+        <div class="chmury-lista" id="s-chmury-status">—</div>
         <button type="button" class="fab szary" id="btn-chmury-ustawienia">☁ Ustawienia chmur</button>
         <div class="s-notka">Nextcloud (główna, Twój QNAP) + pCloud i Dysk Google jako kopie.
         Konfiguracja w osobnym oknie — na głównej karcie robi porządek.</div>
@@ -294,12 +294,9 @@
             <div><b>Dysk Google (kopia)</b><small>logowanie Twoim kontem Google</small></div>
             <span class="ch-strz">▾</span></summary>
           <div class="chmura-tresc">
-            <input class="f-input" id="gd-client" placeholder="Identyfikator klienta OAuth — wypełnia się sam" autocomplete="off">
-            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-login">Zaloguj z Google…</button></div>
-            <input class="f-input" id="gd-kod" placeholder="tu wklej kod ze strony logowania Google" autocomplete="off">
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-login">Zaloguj z Google</button></div>
             <input class="f-input" id="gd-folder" placeholder="nazwa folderu na Twoim Dysku Google, np. FORESTLY GO" autocomplete="off">
-            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-kod">Połącz</button>
-            <button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
+            <div class="s-akcje"><button type="button" class="loc-btn" id="btn-gd-test">Testuj</button>
             <button type="button" class="loc-btn" id="btn-gd-save">Zapisz</button></div>
           </div>
         </details>
@@ -317,6 +314,7 @@
 <script src="js/xlsx-io.js"></script>
 <script src="js/clouds.js"></script>
 <script src="js/session.js"></script>
+<script src="js/sekret.js"></script>
 <script src="js/wersja.js"></script>
 <script src="js/pliki.js"></script>
 <script src="js/app.js"></script>

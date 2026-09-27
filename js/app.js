@@ -665,9 +665,9 @@ async function rysujSync() {
   const pcC = await DB.metaGet("pcloud") || {};
   const gdC = await DB.metaGet("gdrive") || {};
   $("#s-chmury-status").innerHTML =
-    "Nextcloud " + (ncC.url && ncC.pass ? "✓" : "—") +
-    " · pCloud " + (pcC.token ? "✓" : "—") +
-    " · Dysk Google " + (gdC.sa ? "✓" : "—");
+    '<div class="chm-w">' + (ncC.url && ncC.pass ? '<span class="chm-tak">✓</span>' : '<span class="chm-nie">✗</span>') + ' Nextcloud</div>' +
+    '<div class="chm-w">' + (pcC.token ? '<span class="chm-tak">✓</span>' : '<span class="chm-nie">✗</span>') + ' pCloud</div>' +
+    '<div class="chm-w">' + (gdC.refreshToken ? '<span class="chm-tak">✓</span>' : '<span class="chm-nie">✗</span>') + ' Dysk Google</div>';
   $("#s-pliki").innerHTML = wsie.length ? wsie.map(w => {
     const ile = wszystkie.filter(x => x.wies === w).length;
     const nazwa = XLSXIO.nazwaPliku(w, autor || "x");
@@ -688,7 +688,6 @@ async function wczytajKonfigChmur() {
   const pc = await DB.metaGet("pcloud") || {};
   $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
   const gd = await DB.metaGet("gdrive") || {};
-  $("#gd-client").value = gd.clientId || GD_CLIENT_ID;
   $("#gd-folder").value = gd.folder || "FORESTLY GO";
 }
 /* instalacja jako aplikacja: Chrome podpowiada, łapiemy i pokazujemy przycisk */
@@ -750,20 +749,12 @@ if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App) {
   });
 }
 
-/* identyfikator bywa wklejany z "opakowaniem" (http://, cudzysłowy itp.) — czyścimy */
-function gdClientIdZPola() {
-  const m = ($("#gd-client").value || "").match(/[\w.-]*apps\.googleusercontent\.com/);
-  const id = m ? m[0] : "";
-  if (id) $("#gd-client").value = id;   // od razu porządkujemy pole
-  return id;
-}
 $("#btn-gd-login").addEventListener("click", async () => {
-  const clientId = gdClientIdZPola();
-  if (!clientId) { toast("Wklej identyfikator klienta OAuth (kończy się na apps.googleusercontent.com)"); return; }
+  const clientId = GD_CLIENT_ID;
   try {
     const url = await CLOUDS.gdriveLoginUrl(clientId);
     window.open(url, "_blank");
-    toast("Otworzyłem Google — zaloguj się, skopiuj kod i wróć tutaj");
+    toast("Otworzyłem Google — zaloguj się, aplikacja wróci sama");
   } catch (e) { toast("Nie mogę otworzyć logowania: " + e.message); }
 });
 async function gdPolaczKod(kod) {
@@ -772,7 +763,6 @@ async function gdPolaczKod(kod) {
     const r = await CLOUDS.gdriveDolaczKod(kod);
     await DB.metaSet("gdrive", { clientId: r.clientId, refreshToken: r.refreshToken,
       folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
-    $("#gd-kod").value = "";
     toast("Połączono z Dyskiem Google ✓");
     CLOUDS.log("<b>Dysk Google</b> — zalogowano kontem Google");
     /* od razu sprawdzamy, czy wszystko działa — user widzi efekt bez klikania */
@@ -785,16 +775,10 @@ async function gdPolaczKod(kod) {
     return true;
   } catch (e) { toast(e.message); CLOUDS.log("Google błąd: " + e.message); return false; }
 }
-$("#btn-gd-kod").addEventListener("click", async () => {
-  const kod = $("#gd-kod").value.trim();
-  if (!kod) { toast("Wklej kod ze strony logowania Google"); return; }
-  await gdPolaczKod(kod);
-});
+
 $("#btn-gd-save").addEventListener("click", async () => {
   const stary = await DB.metaGet("gdrive") || {};
-  const clientId = gdClientIdZPola();
-  if (!clientId && $("#gd-client").value.trim()) { toast("To nie wygląda na identyfikator klienta Google"); return; }
-  await DB.metaSet("gdrive", { clientId,
+  await DB.metaSet("gdrive", { clientId: stary.clientId || GD_CLIENT_ID,
     refreshToken: stary.refreshToken, folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
   toast("Dysk Google zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Dysku Google — folder: " +
     ($("#gd-folder").value.trim() || "FORESTLY GO"));
@@ -815,7 +799,7 @@ $("#btn-pc-test").addEventListener("click", async () => {
 });
 $("#btn-gd-test").addEventListener("click", async () => {
   const stary = await DB.metaGet("gdrive") || {};
-  const cfg = { clientId: gdClientIdZPola() || stary.clientId,
+  const cfg = { clientId: stary.clientId || GD_CLIENT_ID,
     refreshToken: stary.refreshToken, folder: $("#gd-folder").value.trim() || "FORESTLY GO" };
   if (!cfg.clientId || !cfg.refreshToken) { toast("Najpierw zaloguj się z Google"); return; }
   toast("Łączę z Dyskiem Google…");

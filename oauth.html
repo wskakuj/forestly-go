@@ -42,20 +42,17 @@
     akapit("Wróć do aplikacji ForestlyGO i spróbuj ponownie.");
   } else if (kod) {
     /* próbujemy wrócić do aplikacji ForestlyGO (telefon otworzy ją sam) */
-    location.replace("forestlygo://oauth?code=" + encodeURIComponent(kod));
+    var cel = "forestlygo://oauth?code=" + encodeURIComponent(kod);
     akapit("✓ Zalogowano do Google", "ok");
-    akapit("Aplikacja ForestlyGO powinna otworzyć się sama. Jeśli tak się nie stało — skopiuj kod poniżej i wklej go w aplikacji:");
-    var pole = document.createElement("code");
-    pole.textContent = kod;
-    el.appendChild(pole);
+    akapit("Wracam do aplikacji ForestlyGO…");
     var b = document.createElement("button");
-    b.textContent = "Skopiuj kod";
-    b.onclick = function () {
-      (navigator.clipboard ? navigator.clipboard.writeText(kod) : Promise.reject())
-        .then(function () { b.textContent = "Skopiowano ✓"; })
-        .catch(function () { akapit("Zaznacz kod powyżej i skopiuj go ręcznie.", "zle"); });
-    };
-    el.appendChild(b);
+    var a = document.createElement("a");
+    a.href = cel;
+    a.appendChild(b);
+    b.textContent = "Otwórz ForestlyGO";
+    el.appendChild(a);
+    akapit("Jeśli aplikacja nie otwiera się sama — dotknij przycisku powyżej (upewnij się, że masz najnowszą wersję aplikacji).");
+    try { location.replace(cel); } catch (e) { /* nie tym razem */ }
   } else {
     akapit("To strona zwrotna logowania ForestlyGO.", "zle");
     akapit("Otwórz ją, klikając „Zaloguj z Google…” w aplikacji.");

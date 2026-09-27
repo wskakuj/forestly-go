@@ -39,7 +39,11 @@ jobs:
           cp css/*.css www/css/
           cp vendor/* www/vendor/ 2>/dev/null || true
           cp icons/*.png www/icons/ 2>/dev/null || true
+          # sekret OAuth Google — tylko w APK, do repo trafić nie może
+          echo "window.GD_SECRET = \"${GD_SECRET}\";" > www/js/sekret.js
           ls www www/js
+        env:
+          GD_SECRET: ${{ secrets.GD_CLIENT_SECRET }}
 
       - name: Wersja APK z tagu (np. v1.0.16 → 1.0.16 / versionCode 1000016)
         if: startsWith(github.ref, 'refs/tags/')

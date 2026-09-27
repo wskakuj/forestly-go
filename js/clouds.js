@@ -134,16 +134,23 @@ const CLOUDS = (() => {
       (typeof dane.error === "string" ? dane.error : (dane.error && dane.error.message)) || "?";
   }
 
+  /* sekret klienta Google — wstrzykiwany do APK przy budowie (w repo go nie ma) */
+  function gdSekret() {
+    try { return (window.GD_SECRET || "").trim(); } catch (_) { return ""; }
+  }
+
   /* krok 2: kod z przeglądarki wymieniamy na trwały refresh token */
   async function gdriveDolaczKod(kod) {
     const pkce = JSON.parse(localStorage.getItem("gd_pkce") || "null");
-    if (!pkce) throw new Error("najpierw kliknij „Zaloguj z Google…” — sesja logowania wygasła");
+    if (!pkce) throw new Error("najpierw kliknij „Zaloguj z Google” — sesja logowania wygasła");
+    let cialo = "code=" + encodeURIComponent(kod.trim()) +
+      "&client_id=" + encodeURIComponent(pkce.clientId) +
+      "&code_verifier=" + encodeURIComponent(pkce.verifier) +
+      "&grant_type=authorization_code&redirect_uri=" + encodeURIComponent(GD_REDIRECT);
+    const sek = gdSekret();
+    if (sek) cialo += "&client_secret=" + encodeURIComponent(sek);
     const resp = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "code=" + encodeURIComponent(kod.trim()) +
-        "&client_id=" + encodeURIComponent(pkce.clientId) +
-        "&code_verifier=" + encodeURIComponent(pkce.verifier) +
-        "&grant_type=authorization_code&redirect_uri=" + encodeURIComponent(GD_REDIRECT)
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: cialo
     });
     const dane = await resp.json();
     if (!dane.refresh_token) throw new Error("Google nie wydał tokenu (" +
@@ -154,10 +161,12 @@ const CLOUDS = (() => {
 
   /* token dostępu (odświeżany z refresh tokenu) */
   async function gdriveToken(cfg) {
+    let cialo = "grant_type=refresh_token&client_id=" + encodeURIComponent(cfg.clientId) +
+      "&refresh_token=" + encodeURIComponent(cfg.refreshToken);
+    const sek = gdSekret();
+    if (sek) cialo += "&client_secret=" + encodeURIComponent(sek);
     const resp = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "grant_type=refresh_token&client_id=" + encodeURIComponent(cfg.clientId) +
-        "&refresh_token=" + encodeURIComponent(cfg.refreshToken)
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: cialo
     });
     const dane = await resp.json();
     if (!dane.access_token) throw new Error("Dysk Google: wygasło logowanie — zaloguj się z Google ponownie (" +

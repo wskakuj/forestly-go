@@ -291,3 +291,11 @@ button { font-family: var(--font-body); }
   border-radius: 9px !important; color: #2dd4a7 !important; font: 700 12.5px var(--font-mono) !important;
   padding: 4px 10px !important; box-shadow: 0 3px 10px rgba(0,0,0,.45) !important; }
 .wies-etykieta::before { display: none !important; }
+
+/* lista chmur na karcie Sync — ptaszek/krzyżyk */
+.chmury-lista { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 6px; }
+.chm-w { font-size: 15px; display: flex; align-items: center; gap: 10px; }
+.chm-tak, .chm-nie { display: inline-flex; width: 22px; height: 22px; border-radius: 50%;
+  align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+.chm-tak { color: #7fe08c; background: rgba(127, 224, 140, .14); }
+.chm-nie { color: #ff8a8a; background: rgba(255, 138, 138, .14); }
