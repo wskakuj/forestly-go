@@ -1,36 +1,24 @@
-FORESTLY GO — v1.0.41: aktualizacje w aplikacji, bez wyrzucania do przeglądarki
-===============================================================================
+FORESTLY GO — v1.0.42: wybór folderu bez fałszywego błędu
+==========================================================
 
-1. AKTUALIZACJA W APLIKACJI (najważniejsze)
-   Dotąd pobieranie APK w aplikacji padało: WebView nie może pobierać
-   plików z GitHuba (brak nagłówków CORS) i w efekcie wyrzucało
-   do przeglądarki. Teraz pobiera KOD NATYWNY wtyczki Aktualizacje:
-   - w aplikacji pojawia się okno z paskiem postępu i licznikiem MB,
-   - po pobraniu SAM otwiera się systemowy instalator — klikasz
-     „Zainstaluj” (przy pierwszej aktualizacji raz jeszcze zgoda
-     „Zezwalaj z tego źródła”),
-   - aplikacja się restartuje na nową wersję. Bez przeglądarki,
-     bez szukania pliku w Pobranych.
-   Uwaga: to wymaga nowego APK — ostatni raz trzeba pobrać i zainstalować
-   go ręcznie (z release'u v1.0.41). Kolejne aktualizacje już w aplikacji.
+1. PRZYCISK „WYBIERZ FOLDER” W SYNC
+   Na telefonie, w wersji przeglądarkowej (PWA/ikona ze strony), Chrome
+   potrafi wystawiać API wyboru folderu, ale wybieracz się nie otwiera
+   — po kliknięciu był błąd „Nie udało się wybrać folderu (…user
+   aborted a request…)”. Teraz zamiast błędu pojawia się wyjaśnienie:
+   na telefonie folder wskażesz w aplikacji natywnej (APK ForestlyGO),
+   a w przeglądarce Excel pobierasz przyciskiem — folder nie jest
+   potrzebny.
 
-2. PRZYCISK „WYBIERZ FOLDER” W SYNC
-   - w przeglądarce (PWA) na telefonie: system nie pozwala wskazać
-     folderu — przycisk pokazuje teraz jasne wyjaśnienie zamiast
-     błędu „nie udało się”,
-   - w APK: gdyby coś jeszcze nie działało, komunikat podaje POWÓD
-     (np. „anulowano”) — proszę go zgłosić.
-
-3. KARTA „URZĄDZENIE” W SYNC
-   Nowy wiersz „Tryb” pokazuje, gdzie działa aplikacja:
-   „APK (natywna)” czy „przeglądarka / PWA” — ułatwia diagnozę.
+   WAŻNE: komunikat „user aborted” to też wskazówka diagnostyczna —
+   pojawia się TYLKO w wersji przeglądarkowej. W aplikacji natywnej
+   (APK) ten przycisk w ogóle nie używa przeglądarkowego API, tylko
+   systemowy wybór folderu Androida. Sprawdź w Sync → Urządzenie
+   wiersz „Tryb”: „APK (natywna)” czy „przeglądarka / PWA”.
 
 INSTALACJA
-  Rozpakuj do repo forestly-go i wydaj wersję (release.bat /
-  ForestlyGO Release) — zmiany w plikach WWW i w
-  android/.../AktualizacjePlugin.java (nowa metoda pobierz).
+  Zmiany tylko w plikach WWW — PWA podmieni się sama; APK wymaga
+  wydania wersji (release.bat / ForestlyGO Release).
 
 ZMIENIONE PLIKI
-  index.html, js/app.js, js/pliki.js, js/wersja.js, sw.js,
-  android/app/src/main/java/com/wskakuj/forestlygo/AktualizacjePlugin.java,
-  RELEASE_NOTES.md, CO-CZYTAJ.txt
+  js/app.js, js/wersja.js, sw.js, RELEASE_NOTES.md, CO-CZYTAJ.txt

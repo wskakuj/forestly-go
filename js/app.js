@@ -103,9 +103,24 @@ async function wybierzFolder() {
     const r = await Capacitor.Plugins.Pliki.wybierzFolder();
     return { uri: r.uri, nazwa: r.nazwa, natywny: true };
   }
-  if (window.showDirectoryPicker) return await pokazDialogFolderu();
-  /* telefon w przeglądarce (PWA): system nie pozwala wskazać folderu —
-     tłumaczymy zamiast rzucać błędem */
+  if (window.showDirectoryPicker) {
+    try {
+      return await pokazDialogFolderu();
+    } catch (e) {
+      /* „The user aborted a request” — na telefonie Chrome wystawia to API,
+         ale wybieracz się nie otwiera (PWA/TWA); na komputerze to zwykle
+         własne anulowanie. Anulowanie nie jest błędem do naprawiania. */
+      const anulowano = e && (e.name === "AbortError" || /abort/i.test(String(e.message)));
+      if (anulowano) {
+        if (MOBILNY) toast("Na telefonie folder wskażesz w aplikacji natywnej (APK ForestlyGO) — " +
+          "to ona otwiera systemowy wybór folderu. W przeglądarce Excel pobierasz przyciskiem, " +
+          "folder nie jest potrzebny.", 8000);
+        return null;
+      }
+      throw e;
+    }
+  }
+  /* telefon w przeglądarce bez tego API (PWA): tłumaczymy zamiast rzucać błędem */
   toast("Wybór folderu działa w aplikacji natywnej (APK ForestlyGO) i na komputerze " +
         "w Chrome/Edge. Tutaj pliki Excel i tak pobierzesz przyciskiem — folder nie jest potrzebny.", 6000);
   return null;
