@@ -1,23 +1,25 @@
-FORESTLY GO — v1.0.44: diagnostyka jednym przyciskiem
-====================================================
+FORESTLY GO — v1.0.45: naprawa rejestracji wtyczek (folder + aktualizacje)
+=========================================================================
 
-U usera folder i aktualizacja w aplikacji nadal nie działają, mimo że
-APK jest zbudowany poprawnie (sprawdzone: v1.0.43, nowa nazwa ikony,
-wtyczki w miejscu). Żeby rozstrzygnąć, GDZIE dokładnie działa strona:
+CO BYŁO NIE TAK (dowód z raportu diagnostycznego v1.0.44)
+  Mostek Capacitora działał, ale w liście wtyczek brakowało naszych
+  dwóch: „Pliki” i „Aktualizacje” (były tylko te z paczek npm).
+  Powód: MainActivity rejestrował wtyczki PO super.onCreate(), a
+  mostek Capacitora buduje się właśnie W ŚRODKU super.onCreate —
+  rejestracja po tym momencie trafiała w próżnię.
 
-1. Wydaj tę wersję i zainstaluj APK (ikona „ForestlyGO (APK)”).
-2. Otwórz aplikację → zakładka Sync → karta Urządzenie.
-3. Dotknij „📋 Diagnostyka — skopiuj raport” → „Kopiuj”.
-4. Wklej raport w wiadomości i wyślij — z niego od razu będzie
-   widać: czy działa mostek Capacitora, jakie wtyczki się wstrzyknęły,
-   z jakiego adresu strona została otwarta i jaka to przeglądarka.
+CO SIĘ ZMIENIŁO
+  W MainActivity.java wywołania registerPlugin(...) przeniesione
+  PRZED super.onCreate(). Tym razem wtyczki faktycznie wchodzą
+  do mostka i strona je widzi.
 
-Wiersz „Tryb” pokazuje teraz trzy możliwości:
-  - „APK (natywna)” — wszystko powinno działać,
-  - „przeglądarka / PWA” — otwarty skrót strony,
-  - „APK — brak mostka!” — aplikacja natywna, ale mostek nie
-    odpowiedział (wtedy właśnie potrzebny raport z diagnostyki).
+CO SPRAWDZIĆ PO INSTALACJI (wymagane wydanie APK!)
+  1. Sync → Urządzenie → „Diagnostyka”: na liście wtyczek muszą
+     pojawić się „Pliki” i „Aktualizacje”.
+  2. „Wybierz folder”: otwiera systemowy wybór folderu Androida.
+  3. „Sprawdź aktualizacje” (przy nowszej wersji na GitHubie):
+     pasek postępu pobierania w aplikacji → systemowe „Zainstaluj”.
 
 ZMIENIONE PLIKI
-  index.html, js/app.js, js/wersja.js, sw.js,
-  RELEASE_NOTES.md, CO-CZYTAJ.txt
+  android/app/src/main/java/com/wskakuj/forestlygo/MainActivity.java,
+  js/wersja.js, sw.js, RELEASE_NOTES.md, CO-CZYTAJ.txt

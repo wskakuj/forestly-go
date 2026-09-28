@@ -1,6 +1,6 @@
-# v1.0.44
+# v1.0.45
 
-debug
+fix
 
 ---
 *wydane z telefonu — ForestlyGO Release*
