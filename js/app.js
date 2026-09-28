@@ -738,18 +738,25 @@ function brakujacePola() {
   return braki;
 }
 function pokazOstrzezenieBraki(braki) {
+  /* zabezpieczenie: przy aktualizacji w tle service worker może podać
+     starszy index.html i okno braków jeszcze nie istnieje — wtedy po prostu
+     nie pokazujemy pytania (zapis pójdzie bez ostrzeżenia) */
+  const okno = $("#okno-braki");
+  if (!okno || !$("#braki-lista")) return;
   $("#braki-lista").innerHTML = braki.map(b => "<li>" + b + "</li>").join("");
-  $("#okno-braki").classList.add("on");
+  okno.classList.add("on");
 }
-$("#braki-zamknij").addEventListener("click", () => $("#okno-braki").classList.remove("on"));
-$("#braki-wroc").addEventListener("click", () => $("#okno-braki").classList.remove("on"));
-$("#okno-braki").addEventListener("click", e => {
-  if (e.target.id === "okno-braki") $("#okno-braki").classList.remove("on");
-});
-$("#braki-zapisz").addEventListener("click", () => {
-  $("#okno-braki").classList.remove("on");
-  zapiszWpis(true);
-});
+if (document.getElementById("okno-braki")) {
+  $("#braki-zamknij").addEventListener("click", () => $("#okno-braki").classList.remove("on"));
+  $("#braki-wroc").addEventListener("click", () => $("#okno-braki").classList.remove("on"));
+  $("#okno-braki").addEventListener("click", e => {
+    if (e.target.id === "okno-braki") $("#okno-braki").classList.remove("on");
+  });
+  $("#braki-zapisz").addEventListener("click", () => {
+    $("#okno-braki").classList.remove("on");
+    zapiszWpis(true);
+  });
+}
 $("#btn-zapisz").addEventListener("click", () => zapiszWpis(false));
 
 function uzupelnijForm() {
@@ -962,15 +969,12 @@ async function wczytajKonfigChmur() {
      wywalał całe wczytywanie konfiguracji chmur przy starcie */
   const pcToken = $("#pc-token"); if (pcToken) pcToken.value = pc.token || "";
   $("#pc-path").value = pc.path || "/Taksator";
-<<<<<<< Updated upstream
-=======
   const pcStat = $("#pc-status");
   if (pcStat) pcStat.innerHTML = pc.token
     ? '<span class="chm-tak">✓</span> zalogowany jako <b>' + (pc.email || "?") + '</b> — serwer ' +
       (pc.host === "eapi.pcloud.com" ? "europejski (eapi)" : "amerykański (api)") +
       ', folder: ' + (pc.path || "/Taksator")
     : 'niezalogowany — wpisz e-mail i hasło pCloud i dotknij „Zaloguj”';
->>>>>>> Stashed changes
   const gd = await DB.metaGet("gdrive") || {};
   $("#gd-folder").value = gd.folder || "FORESTLY GO";
 }
@@ -1027,9 +1031,6 @@ $("#btn-pc-zaloguj").addEventListener("click", async () => {
     CLOUDS.log("<b>zalogowano</b> do pCloud — " + r.email +
       ", folder: " + ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
     rysujSync(); resetujStatusPolaczenia();
-<<<<<<< Updated upstream
-  } catch (e) { toast(String(e.message || e)); }
-=======
   } catch (e) {
     toast(String(e.message || e));
     /* szczegóły (po jakim serwerze, jaki kod błędu) — do logu Sync,
@@ -1037,7 +1038,6 @@ $("#btn-pc-zaloguj").addEventListener("click", async () => {
     CLOUDS.log("pCloud <b>logowanie nie wyszło</b>: " + (e.message || e) +
       (e.szczegoly && e.szczegoly.length ? " — próby: " + e.szczegoly.join("; ") : ""));
   }
->>>>>>> Stashed changes
 });
 $("#btn-pc-save").addEventListener("click", async () => {
   const stara = await DB.metaGet("pcloud") || {};
@@ -1296,10 +1296,14 @@ function wybierzWies(w) {
   przelaczTab("form");
   toast("Wieś: " + w + " — nowe opisy będą tu wpisywane");
 }
-$("#wies-zamknij").addEventListener("click", () => $("#okno-wies").classList.remove("on"));
-$("#okno-wies").addEventListener("click", e => {
-  if (e.target.id === "okno-wies") $("#okno-wies").classList.remove("on");
-});
+/* zabezpieczone jak okno braków — przy zmieszanych wersjach plików
+   po aktualizacji w tle elementy mogą jeszcze nie istnieć */
+if (document.getElementById("okno-wies")) {
+  $("#wies-zamknij").addEventListener("click", () => $("#okno-wies").classList.remove("on"));
+  $("#okno-wies").addEventListener("click", e => {
+    if (e.target.id === "okno-wies") $("#okno-wies").classList.remove("on");
+  });
+}
 
 /* ---------- podpowiedzi wsi (własna rozwijana lista) ---------- */
 let znaneWsie = [];
@@ -1538,3 +1542,21 @@ $("#chmury-zamknij").addEventListener("click", () => {
 $("#okno-chmur").addEventListener("click", e => {
   if (e.target.id === "okno-chmur") $("#okno-chmur").classList.remove("on");
 });
+
+/* ---------- samonaprawa wersji ----------
+   Przy aktualizacji w tle service worker potrafi podać pliki z DWÓCH wersji
+   naraz (np. nowy app.js + stary index.html). Każdy nasłuch jest już
+   zabezpieczony na brak elementu, więc aplikacja wystartuje — ale żeby nie
+   pracować na miksie, porównujemy wersję HTML ze wersją skryptów i przy
+   niezgodności przeładowujemy stronę RAZ (service worker poda wtedy już
+   komplet plików z jednej wersji). */
+(function samonaprawaWersji() {
+  try {
+    const html = window.__htmlWersja;
+    const js = (typeof WERSJA_APLIKACJI !== "undefined" ? String(WERSJA_APLIKACJI) : "").replace(/^v/, "");
+    if (html && js && html !== js && !sessionStorage.getItem("fg_przeladowanie")) {
+      sessionStorage.setItem("fg_przeladowanie", "1");
+      location.replace(location.href);
+    }
+  } catch (e) { /* nic — to tylko zabezpieczenie */ }
+})();

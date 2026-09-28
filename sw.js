@@ -1,9 +1,5 @@
 /* Taksator terenowy — service worker: powłoka aplikacji offline + kafle mapy */
-<<<<<<< Updated upstream
-const WERSJA = "forestlygo-v43";
-=======
-const WERSJA = "forestlygo-v44";
->>>>>>> Stashed changes
+const WERSJA = "forestlygo-v45";
 const SZKIELET = [
   "./", "./index.html", "./oauth.html", "./polityka-prywatnosci.html",
   "./manifest.webmanifest",
