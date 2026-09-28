@@ -1,4 +1,3 @@
-# Co nowego w Forestly GO v1.0.53
+# Co nowego w Forestly GO v1.0.54
 
-* pcloud fix
-
+- 

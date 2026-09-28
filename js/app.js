@@ -968,6 +968,9 @@ async function wczytajKonfigChmur() {
   /* #pc-token nie istnieje od porządków w Sync (v1.0.20) — ten zapis
      wywalał całe wczytywanie konfiguracji chmur przy starcie */
   const pcToken = $("#pc-token"); if (pcToken) pcToken.value = pc.token || "";
+  /* e-mail wypełniamy z zapisanej konfiguracji — HASŁA nie trzymamy
+     (pole zostaje puste do ponownego logowania; zalogowanie trwa 2 lata) */
+  const pcEmail = $("#pc-email"); if (pcEmail) pcEmail.value = pc.email || "";
   $("#pc-path").value = pc.path || "/Taksator";
   const pcStat = $("#pc-status");
   if (pcStat) pcStat.innerHTML = pc.token
@@ -1538,7 +1541,8 @@ document.querySelectorAll(".chmura").forEach(d => {
 });
 
 /* ---------- okno ustawień chmur ---------- */
-$("#btn-chmury-ustawienia").addEventListener("click", () => {
+$("#btn-chmury-ustawienia").addEventListener("click", async () => {
+  await wczytajKonfigChmur();   /* świeże wartości zapisanej konfiguracji */
   $("#okno-chmur").classList.add("on");
 });
 $("#chmury-zamknij").addEventListener("click", () => {
