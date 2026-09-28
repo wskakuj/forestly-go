@@ -1,28 +1,28 @@
-FORESTLY GO — v1.0.47: przycisk Wieś, pasek postępu całego opisu
-================================================================
+FORESTLY GO — v1.0.48: ostrzeżenie o brakach przed zapisem
+===========================================================
 
-1. PRZYCISK „WIEŚ” W DOLNYM PASKU (między Wykaz a Nowy opis)
-   Otwiera listę wsi z liczbą wpisów. Dotknij wieś — staje się
-   celem nowych opisów: formularz od razu jest na niej ustawiony,
-   a u góry ekranu (chip) widać wybraną wieś. Na dole listy
-   „+ Nowa wieś” — nazwę wpiszesz przy pierwszym opisie.
+CO NOWEGO
+  Przy „✓ Zapisz” aplikacja sprawdza ważne pola opisu. Jeśli czegoś
+  brakuje, pokaże się okno:
 
-2. „NOWY OPIS” ZOSTAJE WE WSI
-   Przycisk „Nowy opis” otwiera formularz z ostatnio wpisywaną
-   wsią — nie trzeba jej wybierać od nowa. Po zapisie opisu
-   formularz też od razu czeka na tę samą wieś (wystarczy
-   wpisywać kolejne numery wydzieleń).
+      ⚠ Niepełny opis
+      Czego brakuje:
+      — zwarcie
+      — podszyt
+      Zapisać mimo to?
+      [← Wróć do formularza]   [Zapisz mimo to]
 
-3. PASEK POSTĘPU = CAŁY OPIS
-   Zamiast 4 pól (które zapełniały się po samym drzewostanie)
-   pasek ma teraz 7 odcinków: wieś, numery wydzieleń, siedlisko,
-   gatunek panujący, zwarcie, podszyt i lokalizacja. Napełnia
-   się w miarę przechodzenia przez cały formularz.
+  Sprawdzane pola: numer wydzielenia, siedlisko, gatunek panujący,
+  zwarcie, podszyt.
 
-4. USUNIĘTO
-   Przycisk „Diagnostyka” w Sync (zadanie wykonane — mostek
-   naprawiony w v1.0.45). Wiersz „Tryb” w karcie Urządzenie
-   pozostaje.
+  NIE sprawdzane: pola opcjonalne (drugi gatunek, przedrostek/pjd.,
+  elementy taksacyjne, wskazania) oraz lokalizacja — zgodnie z życiem
+  w lesie, tam bywa różnie.
+
+  Wieś nadal blokuje zapis całkowicie (bez niej plik Excel nie ma
+  po czym się grupować) — to bez zmian.
+
+  Pełny opis zapisuje się od razu, bez pytania.
 
 ZMIENIONE PLIKI
   index.html, css/app.css, js/app.js, js/wersja.js, sw.js,

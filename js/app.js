@@ -693,10 +693,14 @@ $("#btn-pin-do-opisu").addEventListener("click", () => {
 });
 
 /* ---------- zapis wpisu ---------- */
-async function zapiszWpis() {
+async function zapiszWpis(pominWalidacje) {
   const autor = await DB.metaGet("autor");
   if (!autor) { toast("Najpierw podaj, kto zbiera dane (kreator)"); return; }
   if (!stan.wies.trim()) { toast("Podaj obręb / wieś — po tym grupuje się plik Excel"); return; }
+  if (!pominWalidacje) {
+    const braki = brakujacePola();
+    if (braki.length) { pokazOstrzezenieBraki(braki); return; }
+  }
   const wpis = Object.assign({}, stan, {
     id: trybEdycji || ("w" + Date.now() + "-" + Math.random().toString(36).slice(2, 7)),
     autor,
@@ -721,7 +725,32 @@ async function zapiszWpis() {
   przelaczTab("wykaz");
   rysujWykaz();
 }
-$("#btn-zapisz").addEventListener("click", zapiszWpis);
+/* braki w opisie: pola, które powinny być wypełnione
+   (opcjonalne — pjd, drugi gatunek, elementy taksacyjne, wskazania —
+   oraz lokalizacja NIE są sprawdzane; wieś blokuje zapis osobno) */
+function brakujacePola() {
+  const braki = [];
+  if (!stan.dzialki.length) braki.push("numer wydzielenia");
+  if (!stan.siedlisko) braki.push("siedlisko");
+  if (!stan.panujacy) braki.push("gatunek panujący");
+  if (!stan.zwarcie) braki.push("zwarcie");
+  if (!stan.podsz.length) braki.push("podszyt");
+  return braki;
+}
+function pokazOstrzezenieBraki(braki) {
+  $("#braki-lista").innerHTML = braki.map(b => "<li>" + b + "</li>").join("");
+  $("#okno-braki").classList.add("on");
+}
+$("#braki-zamknij").addEventListener("click", () => $("#okno-braki").classList.remove("on"));
+$("#braki-wroc").addEventListener("click", () => $("#okno-braki").classList.remove("on"));
+$("#okno-braki").addEventListener("click", e => {
+  if (e.target.id === "okno-braki") $("#okno-braki").classList.remove("on");
+});
+$("#braki-zapisz").addEventListener("click", () => {
+  $("#okno-braki").classList.remove("on");
+  zapiszWpis(true);
+});
+$("#btn-zapisz").addEventListener("click", () => zapiszWpis(false));
 
 function uzupelnijForm() {
   if (stan.siedlisko === "OJ") stan.siedlisko = "OlJ"; // stare wpisy

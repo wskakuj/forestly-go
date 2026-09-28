@@ -387,3 +387,12 @@ button { font-family: var(--font-body); }
 .wies-poz.wybrana { border-color: var(--accent); background: rgba(45, 212, 167, .1); }
 .wies-poz:active { transform: scale(.98); }
 .wies-poz.nowa { border-style: dashed; }
+
+/* ---------- ostrzeżenie o brakach przed zapisem ---------- */
+.braki-tresc { padding: 14px 16px 4px; }
+.braki-tresc p { margin: 0 0 8px; font-size: 13.5px; }
+.braki-tresc .braki-pytanie { font-weight: 700; margin-top: 12px; }
+.braki-tresc ul { margin: 0 0 4px; padding-left: 4px; list-style: none; }
+.braki-tresc li { color: var(--orange); font-weight: 600; padding: 5px 0 5px 22px; position: relative; }
+.braki-tresc li::before { content: "—"; position: absolute; left: 4px; color: var(--dim); }
+.braki-akcje { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 16px; }
