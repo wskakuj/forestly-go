@@ -377,3 +377,13 @@ button { font-family: var(--font-body); }
 .zp-suma-sub { font-size: 11px; color: var(--dim); margin-top: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .zapis-pasek .zp-btn { flex: none; width: auto; margin: 0; padding: 13px 24px; font-size: 14px; }
+
+/* ---------- wybór wsi (nawigacja) ---------- */
+.wies-wyb { display: flex; flex-direction: column; gap: 6px; padding: 12px; max-height: 60vh; overflow-y: auto; }
+.wies-poz { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  width: 100%; text-align: left; padding: 12px 14px; border-radius: 12px; cursor: pointer;
+  background: rgba(255, 255, 255, .05); border: 1.5px solid var(--line2); color: var(--ink); }
+.wies-poz small { color: var(--dim); font-size: 11px; }
+.wies-poz.wybrana { border-color: var(--accent); background: rgba(45, 212, 167, .1); }
+.wies-poz:active { transform: scale(.98); }
+.wies-poz.nowa { border-style: dashed; }

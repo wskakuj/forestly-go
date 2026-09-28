@@ -406,11 +406,21 @@ function odswiezPasekZapisu() {
   const drzewa = [stan.panujacy, stan.drugi].filter(Boolean).join(" + ") || "—";
   sub.textContent = (stan.siedlisko || "—") + " · " + drzewa +
     (stan.zwarcie ? " · " + stan.zwarcie : "");
-  const spelnione = [!!stan.wies, stan.dzialki.length > 0, !!stan.siedlisko, !!stan.panujacy];
+  /* kompletność CAŁEGO opisu — pasek napełnia się w miarę wypełniania
+     kolejnych sekcji, nie całości po samym drzewostanie */
+  const spelnione = [
+    !!stan.wies,             // 1. wieś
+    stan.dzialki.length > 0, // 2. numery wydzieleń
+    !!stan.siedlisko,        // 3. siedlisko
+    !!stan.panujacy,         // 4. gatunek panujący
+    !!stan.zwarcie,          // 5. zwarcie
+    stan.podsz.length > 0,   // 6. podszyt
+    stan.lat != null         // 7. lokalizacja
+  ];
   const ile = spelnione.filter(Boolean).length;
   if (postep) {
     postep.innerHTML = spelnione.map(ok => '<i class="' + (ok ? "on" : "") + '"></i>').join("");
-    postep.title = "uzupełniono " + ile + " z 4 pól obowiązkowych";
+    postep.title = "kompletność opisu: " + ile + " / 7";
   }
 }
 function rysuj() {
@@ -701,7 +711,8 @@ async function zapiszWpis() {
   trybEdycji = null;
   SESJA.zapiszZLogiem();
   const zapisanaWies = wpis.wies;
-  stan = nowyStan(); uzupelnijForm();
+  /* formularz od razu ustawiony na tę samą wieś — kolejny opis bez klikania */
+  stan = nowyStan(); stan.wies = zapisanaWies; uzupelnijForm(); rysuj();
   // wracamy do widoku opisów wsi, do której należy zapisany opis
   aktywnaWies = zapisanaWies;
   localStorage.setItem("aktywnaWies", aktywnaWies);
@@ -888,8 +899,8 @@ async function rysujSync() {
         ? "Ten skrót strony działa w przeglądarce — dlatego folderu nie da się wskazać. " +
           "Zamknij i otwórz ikonę „ForestlyGO (APK)” z listy aplikacji: to zainstalowana aplikacja, " +
           "w niej wybór folderu i aktualizacje działają w aplikacji."
-        : "Wygląda na to, że działa aplikacja natywna, ale jej mostek nie odpowiedział. " +
-          "Dotknij „Diagnostyka — skopiuj raport” poniżej i wyślij mi ten raport — naprawię to.";
+        : "Wygląda na to, że działa aplikacja natywna, ale jej mostek nie odpowiedział — " +
+          "napisz mi o tym, poprowadzę przez naprawę.";
     } else if (nota) nota.remove();
   }
   const wsie = await DB.wpisyWsie();
@@ -1190,7 +1201,56 @@ async function wyslijWies(wies, cicho) {
 /* ---------- nawigacja ---------- */
 $("#bnav").addEventListener("click", e => {
   const bn = e.target.closest(".bn");
-  if (bn) przelaczTab(bn.dataset.tab);
+  if (!bn) return;
+  if (bn.id === "bn-wies") { otworzWyborWsi(); return; }
+  if (bn.dataset.tab === "form" && !trybEdycji && !stan.wies && aktywnaWies) {
+    /* „Nowy opis” otwiera formularz z ostatnio wpisywaną wsią */
+    stan.wies = aktywnaWies;
+    uzupelnijForm(); rysuj();
+  }
+  przelaczTab(bn.dataset.tab);
+});
+
+/* ---------- wybór wsi (przycisk „Wieś” w nawigacji) ---------- */
+async function otworzWyborWsi() {
+  const box = $("#wies-wyb");
+  const wsie = await DB.wpisyWsie();
+  const wszystkie = await DB.wpisyAll();
+  let html = wsie.map(w => {
+    const ile = wszystkie.filter(x => x.wies === w).length;
+    return '<button type="button" class="wies-poz' + (aktywnaWies === w ? " wybrana" : "") + '" data-wies="' + w + '">' +
+      "<b>" + w + (aktywnaWies === w ? " ✓" : "") + "</b><small>" + ile + " wpis" + (ile === 1 ? "" : "ów") + "</small></button>";
+  }).join("");
+  if (!wsie.length) html = '<div class="s-notka">Jeszcze nie ma żadnej wsi — pierwszą nazwiesz przy pierwszym opisie.</div>';
+  html += '<button type="button" class="wies-poz nowa" id="wies-nowa2"><b>+ Nowa wieś</b><small>nazwę wpiszesz przy pierwszym opisie</small></button>';
+  box.innerHTML = html;
+  box.querySelectorAll(".wies-poz[data-wies]").forEach(p =>
+    p.addEventListener("click", () => wybierzWies(p.dataset.wies)));
+  const n2 = box.querySelector("#wies-nowa2");
+  if (n2) n2.addEventListener("click", () => {
+    aktywnaWies = ""; localStorage.removeItem("aktywnaWies");
+    trybEdycji = null; stan = nowyStan(); uzupelnijForm(); rysuj();
+    $("#okno-wies").classList.remove("on");
+    odswiezListeWsi(); odswiezAppbar(); przelaczTab("form");
+    toast("Nowa wieś — wpisz nazwę w pierwszym polu");
+  });
+  $("#okno-wies").classList.add("on");
+}
+function wybierzWies(w) {
+  aktywnaWies = w;
+  localStorage.setItem("aktywnaWies", w);
+  trybEdycji = null;
+  stan = nowyStan();
+  stan.wies = w;
+  uzupelnijForm(); rysuj();
+  $("#okno-wies").classList.remove("on");
+  odswiezListeWsi(); odswiezAppbar();
+  przelaczTab("form");
+  toast("Wieś: " + w + " — nowe opisy będą tu wpisywane");
+}
+$("#wies-zamknij").addEventListener("click", () => $("#okno-wies").classList.remove("on"));
+$("#okno-wies").addEventListener("click", e => {
+  if (e.target.id === "okno-wies") $("#okno-wies").classList.remove("on");
 });
 
 /* ---------- podpowiedzi wsi (własna rozwijana lista) ---------- */
@@ -1226,81 +1286,6 @@ function bindAutoWsie() {
   });
 }
 bindAutoWsie();
-
-/* ---------- diagnostyka (Sync → Urządzenie) ---------- */
-async function raportDiagnostyczny() {
-  const naStronie = location.pathname.indexOf("/forestly-go") === 0;
-  let mostek = "brak", isNat = "—", wtyczki = "brak", naglowki = "brak";
-  try {
-    if (window.Capacitor) {
-      mostek = "jest";
-      isNat = window.Capacitor.isNativePlatform ? String(window.Capacitor.isNativePlatform()) : "?";
-      const w = Object.keys(window.Capacitor.Plugins || {});
-      wtyczki = w.length ? w.join(", ") : "brak";
-      const nh = window.Capacitor.PluginHeaders;
-      naglowki = Array.isArray(nh) ? nh.map(x => x && (x.name || x.id || "?")).join(", ") : "brak";
-    }
-  } catch (e) { mostek = "błąd: " + e.message; }
-  let sw = "brak";
-  try {
-    if (navigator.serviceWorker) sw = navigator.serviceWorker.controller
-      ? "kontroluje stronę (scope: " + navigator.serviceWorker.controller.scriptURL + ")"
-      : "zarejestrowany, nie kontroluje";
-  } catch (e) {}
-  return [
-    "RAPORT FORESTLYGO " + (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?"),
-    "tryb: " + (czyNatywnie() ? "APK (natywna)" : (naStronie ? "przeglądarka / PWA" : "APK — brak mostka!")),
-    "mostek Capacitor: " + mostek + (mostek === "jest" ? " (isNativePlatform: " + isNat + ")" : ""),
-    "wtyczki: " + wtyczki,
-    "nagłówki wtyczek: " + naglowki,
-    "showDirectoryPicker: " + (window.showDirectoryPicker ? "dostępne" : "brak"),
-    "adres strony: " + location.href,
-    "service worker: " + sw,
-    "tryb standalone: " + (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches ? "tak" : "nie"),
-    "przeglądarka: " + navigator.userAgent,
-    "data: " + new Date().toISOString()
-  ].join("\n");
-}
-async function kopiujDoSchowka(tekst) {
-  try { await navigator.clipboard.writeText(tekst); return true; } catch (e) {}
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = tekst;
-    ta.style.cssText = "position:fixed;opacity:0";
-    document.body.appendChild(ta);
-    ta.focus(); ta.select();
-    const ok = document.execCommand("copy");
-    ta.remove();
-    return ok;
-  } catch (e) { return false; }
-}
-async function pokazDiagnostyke() {
-  const raport = await raportDiagnostyczny();
-  const nak = document.createElement("div");
-  nak.id = "diag-nakladka";
-  nak.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);" +
-    "display:flex;align-items:center;justify-content:center;padding:16px";
-  const box = document.createElement("div");
-  box.style.cssText = "background:#141a22;border:1px solid rgba(45,212,167,.45);border-radius:14px;" +
-    "padding:18px;width:min(92vw,420px);font:12px var(--font-mono,monospace);color:#eef2f6";
-  box.innerHTML = '<b style="font-size:14px">Diagnostyka</b>' +
-    '<textarea readonly style="width:100%;height:260px;margin-top:10px;background:#0b0f14;color:#eef2f6;' +
-    'border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:8px;font:11px monospace"></textarea>' +
-    '<div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">' +
-    '<button type="button" class="fab" id="diag-kopiuj">Kopiuj</button>' +
-    '<button type="button" class="fab szary" id="diag-zamknij">Zamknij</button></div>';
-  const pole = box.querySelector("textarea");
-  pole.value = raport;
-  nak.appendChild(box);
-  document.body.appendChild(nak);
-  box.querySelector("#diag-zamknij").onclick = () => nak.remove();
-  box.querySelector("#diag-kopiuj").onclick = async () => {
-    pole.focus(); pole.select();
-    const ok = await kopiujDoSchowka(raport);
-    toast(ok ? "Skopiowano ✓ — wklej w wiadomości do mnie" : "Zaznacz tekst i skopiuj ręcznie", 5000);
-  };
-}
-$("#btn-diag").addEventListener("click", pokazDiagnostyke);
 
 /* ---------- sprawdzanie aktualizacji (ręczny przycisk w Sync) ---------- */
 async function sprawdzAktualizacjeRecznie() {

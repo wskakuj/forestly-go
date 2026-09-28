@@ -1,31 +1,28 @@
-FORESTLY GO — v1.0.46: odświeżona zakładka „Nowy opis”
-======================================================
+FORESTLY GO — v1.0.47: przycisk Wieś, pasek postępu całego opisu
+================================================================
 
-CO NOWEGO
-  1. KARTY-SEKCJE — formularz nie jest już jedną długą kolumną:
-     📍 Gdzie (obręb/wieś + numery wydzieleń)
-     🌲 Drzewostan (siedlisko, gatunki, wiek, pjd, zwarcie)
-     🌿 Podszyt i detale (podszyt + zwijane: elementy taksacyjne,
-        wskazania)
-     📌 Lokalizacja (GPS / mapa)
+1. PRZYCISK „WIEŚ” W DOLNYM PASKU (między Wykaz a Nowy opis)
+   Otwiera listę wsi z liczbą wpisów. Dotknij wieś — staje się
+   celem nowych opisów: formularz od razu jest na niej ustawiony,
+   a u góry ekranu (chip) widać wybraną wieś. Na dole listy
+   „+ Nowa wieś” — nazwę wpiszesz przy pierwszym opisie.
 
-  2. PŁYWAJĄCY PASEK ZAPISU — zawsze widoczny na dole ekranu:
-     - 4 kreski postępu pól obowiązkowych (wieś, numer, siedlisko,
-       gatunek panujący) — świecą się na zielono w miarę wypełniania,
-     - podsumowanie na żywo: „Lasków · 10, 12” oraz „Lw · So + Md”,
-     - przycisk „✓ Zapisz” zawsze pod ręką, bez szurania na dół.
+2. „NOWY OPIS” ZOSTAJE WE WSI
+   Przycisk „Nowy opis” otwiera formularz z ostatnio wpisywaną
+   wsią — nie trzeba jej wybierać od nowa. Po zapisie opisu
+   formularz też od razu czeka na tę samą wieś (wystarczy
+   wpisywać kolejne numery wydzieleń).
 
-  3. ZWIJANE DETALE — „Elementy taksacyjne” i „Wskazania” (rzadko
-     używane) są schowane pod „rozwiń ▾” — formularz jest krótszy.
+3. PASEK POSTĘPU = CAŁY OPIS
+   Zamiast 4 pól (które zapełniały się po samym drzewostanie)
+   pasek ma teraz 7 odcinków: wieś, numery wydzieleń, siedlisko,
+   gatunek panujący, zwarcie, podszyt i lokalizacja. Napełnia
+   się w miarę przechodzenia przez cały formularz.
 
-  4. DROBNICE — większe chipy z wyraźnym zaznaczeniem gradientem,
-     większe przyciski +/- przy wiekach i udziałach, teksty pomocnicze
-     pod etykietami (koniec ucinanych napisów).
-
-INSTALACJA
-  Zmiany tylko w plikach WWW — PWA podmieni się sama; przy APK
-  wystarczy wydać wersję (release.bat) i zainstalować aktualizację
-  (teraz już z poziomu aplikacji, z paskiem postępu).
+4. USUNIĘTO
+   Przycisk „Diagnostyka” w Sync (zadanie wykonane — mostek
+   naprawiony w v1.0.45). Wiersz „Tryb” w karcie Urządzenie
+   pozostaje.
 
 ZMIENIONE PLIKI
   index.html, css/app.css, js/app.js, js/wersja.js, sw.js,
