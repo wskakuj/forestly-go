@@ -93,75 +93,111 @@ const CLOUDS = (() => {
     if (!email || !haslo) throw new Error("podaj e-mail i hasło pCloud");
     const login = email.trim().toLowerCase();
     const kod2fa = (kod || "").replace(/\s+/g, "");
-    /* pCloud (od zmian w 2026) wymaga przy logowaniu hasłem kodu
-       weryfikacyjnego (e-mail/SMS/aplikacja), POKI urządzenie nie jest
-       rozpoznane. Dlatego: stały identyfikator urządzenia + po podaniu
-       kodu oznaczamy je jako zaufane (trustdevice) i przy kolejnych
-       logowaniach pCloud nie pyta już o kod. */
+    /* pCloud (od zmian w 2026): przy logowaniu hasłem wymagany jest kod
+       weryfikacyjny (aplikacja 2FA / e-mail / SMS), dopóki urządzenie
+       nie jest rozpoznane. UWAGA: endpoint /login NIE przyjmuje kodu —
+       trzeba go wymienić przez tfa_login (na tokenie wyzwania) albo
+       podać w /userinfo. Po udanym logowaniu z kodem urządzenie
+       oznaczamy jako zaufane i kolejne logowania idą bez kodu. */
     let devId = localStorage.getItem("fg_pc_deviceid");
     if (!devId) {
       devId = "forestlygo-" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
       localStorage.setItem("fg_pc_deviceid", devId);
     }
     const urzadzenie = { deviceid: devId, device: "ForestlyGO", os: 4 };
+    const wspolne = { getauth: 1, logout: 1, authexpire: 63072000, authinactiveexpire: 63072000 };
     const proby = [];   /* diagnostyka: co odpowiedział każdy serwer */
-    let ostatniBlad = null;
-    /* kod podany a mamy token wyzwania z poprzedniej próby → tfa_login */
+    let ostatniBlad = null, byloWyzwanie = false;
+
+    /* wymiana kodu na token sesji przez tfa_login (bez logout!) */
+    const wymianaTfa = async (host, token) => {
+      const dane = await pcPOST(host, "tfa_login", Object.assign({
+        token: token, code: kod2fa, trustdevice: 1,
+        getauth: 1, authexpire: 63072000, authinactiveexpire: 63072000 }, urzadzenie));
+      if (dane.result === 0 && dane.auth) {
+        localStorage.removeItem("fg_pc_tfatoken"); localStorage.removeItem("fg_pc_tfahost");
+        return dane;
+      }
+      if (dane.result === 2012) throw Object.assign(
+        new Error("pCloud: nieprawidłowy kod — wpisz ŚWIEŻY kod z aplikacji i zaloguj się ponownie"),
+        { szczegoly: proby });
+      proby.push(host + " (tfa_login): odpowiedź " + dane.result + (dane.error ? " (" + dane.error + ")" : ""));
+      return null;
+    };
+
+    /* wyzwanie kodem: token w odpowiedzi, kod 1022, NOWY kod 2297 (2FA),
+       albo komunikat o kodzie w treści błędu */
+    const czyWyzwanie = dane => !!(dane && (dane.token || dane.result === 1022 || dane.result === 2297 ||
+      /provide 'code'/i.test(dane.error || "") || /2fa/i.test(dane.error || "")));
+
+    /* zapamiętany token wyzwania + podany kod → od razu wymiana */
     const tfaTok = localStorage.getItem("fg_pc_tfatoken");
     const tfaHost = localStorage.getItem("fg_pc_tfahost");
     if (kod2fa && tfaTok && tfaHost) {
       try {
-        const dane = await pcPOST(tfaHost, "tfa_login", Object.assign({
-          getauth: 1, token: tfaTok, code: kod2fa, trustdevice: 1,
-          authexpire: 63072000 }, urzadzenie));
-        if (dane.result === 0 && dane.auth) {
-          localStorage.removeItem("fg_pc_tfatoken"); localStorage.removeItem("fg_pc_tfahost");
-          return { token: dane.auth, email: dane.email, host: tfaHost };
-        }
-        /* token wygasł / zły kod — próbujemy zwykłej drogi niżej */
-        proby.push("tfa_login: " + dane.result + (dane.error ? " (" + dane.error + ")" : ""));
-        if (dane.result !== 2012) { localStorage.removeItem("fg_pc_tfatoken"); localStorage.removeItem("fg_pc_tfahost"); }
-      } catch (e) { proby.push("tfa_login: brak połączenia"); }
+        const dane = await wymianaTfa(tfaHost, tfaTok);
+        if (dane) return { token: dane.auth, email: dane.email, host: tfaHost };
+      } catch (e) { if (e.szczegoly) throw e; proby.push("tfa_login: brak połączenia"); }
+      localStorage.removeItem("fg_pc_tfatoken"); localStorage.removeItem("fg_pc_tfahost");
     }
+
     for (const host of ["api.pcloud.com", "eapi.pcloud.com"]) {
+      /* 1) /login BEZ kodu — sprawdza hasło i zbiera wyzwanie (z tokenem) */
       let dane = null;
       try {
         dane = await pcPOST(host, "login", Object.assign({
-          getauth: 1, logout: 1, authexpire: 63072000,
-          username: login, password: haslo }, urzadzenie,
-          kod2fa ? { code: kod2fa } : {}));
+          username: login, password: haslo }, wspolne, urzadzenie));
       } catch (e) {
         /* TypeError = żądanie w ogóle nie doszło (sieć / blokada przeglądarki) */
-        proby.push(host + ": brak połączenia (" + (e.name === "TypeError" ? "sieć/CORS" : e.message) + ")");
+        proby.push(host + " (login): brak połączenia (" + (e.name === "TypeError" ? "sieć/CORS" : e.message) + ")");
         continue;
       }
       if (dane.result === 0 && dane.auth) return { token: dane.auth, email: dane.email, host };
-      proby.push(host + ": odpowiedź " + dane.result + (dane.error ? " (" + dane.error + ")" : ""));
+      proby.push(host + " (login): odpowiedź " + dane.result + (dane.error ? " (" + dane.error + ")" : "") +
+        (dane.token ? " [token wyzwania]" : ""));
       if (dane.result === 4000) throw new Error("pCloud: zbyt wiele prób logowania — " +
         "odczekaj około godzinę i spróbuj jeszcze raz (raz)");
-      if (dane.result === 2012)
-        throw Object.assign(new Error("pCloud: nieprawidłowy kod — wpisz świeży kod " +
-          "z e-maila/SMS i zaloguj się ponownie"), { szczegoly: proby });
-      /* wyzwanie kodem: 2FA ALBO weryfikacja nowego urządzenia — pCloud
-         w obu przypadkach wysyła/oczekuje kodu i zwraca token wyzwania */
-      const wymagaKodu = dane.token || dane.result === 1022 || /provide 'code'/i.test(dane.error || "");
-      if (wymagaKodu && !kod2fa) {
+      if (czyWyzwanie(dane)) {
+        byloWyzwanie = true;
         if (dane.token) {
           localStorage.setItem("fg_pc_tfatoken", dane.token);
           localStorage.setItem("fg_pc_tfahost", host);
         }
-        const blad = new Error("pCloud wymaga kodu weryfikacyjnego — sprawdź POCZTĘ " +
-          "(również spam), SMS-y lub aplikację pCloud: przy logowaniu z nowego " +
-          "urządzenia pCloud wysyła kod. Wpisz go w pole „kod” i dotknij „Zaloguj” " +
-          "ponownie. Przy pierwszym razem wystarczy — urządzenie zostanie zapamiętane");
-        blad.potrzebujeKodu = true;
-        blad.szczegoly = proby;
-        throw blad;
+        if (!kod2fa) {
+          const blad = new Error("pCloud wymaga kodu weryfikacyjnego — wpisz aktualny kod " +
+            "z APLIKACJI 2FA (albo z e-maila/SMS, jeśli takie przyszło) w pole „kod” i dotknij " +
+            "„Zaloguj” ponownie. Przy pierwszym razem wystarczy — urządzenie zostanie zapamiętane");
+          blad.potrzebujeKodu = true;
+          blad.szczegoly = proby;
+          throw blad;
+        }
+        /* kod podany: z tokenem → wymiana, bez tokenu → /userinfo z kodem */
+        if (dane.token) {
+          try {
+            const tfa = await wymianaTfa(host, dane.token);
+            if (tfa) return { token: tfa.auth, email: tfa.email, host };
+          } catch (e) { if (e.szczegoly) throw e; proby.push(host + " (tfa_login): brak połączenia"); }
+        } else {
+          let d2 = null;
+          try {
+            d2 = await pcPOST(host, "userinfo", Object.assign({
+              username: login, password: haslo, code: kod2fa }, wspolne, urzadzenie));
+          } catch (e) { proby.push(host + " (userinfo+kod): brak połączenia"); continue; }
+          if (d2.result === 0 && d2.auth) return { token: d2.auth, email: d2.email, host };
+          proby.push(host + " (userinfo+kod): odpowiedź " + d2.result + (d2.error ? " (" + d2.error + ")" : ""));
+          if (d2.result === 2012) throw Object.assign(
+            new Error("pCloud: nieprawidłowy kod — wpisz ŚWIEŻY kod z aplikacji i zaloguj się ponownie"),
+            { szczegoly: proby });
+        }
+        continue;
       }
       ostatniBlad = dane;
     }
-    const blad = new Error("pCloud: " + ((ostatniBlad && ostatniBlad.error) || "logowanie nie udało się") +
-      " — sprawdź, czy te dane działają na my.pcloud.com");
+    const blad = new Error(byloWyzwanie
+      ? "pCloud nie przyjął kodu — upewnij się, że kod z aplikacji jest AKTUALNY " +
+        "(zmienia się co 30 sekund), wpisz świeży i zaloguj się ponownie"
+      : "pCloud: " + ((ostatniBlad && ostatniBlad.error) || "logowanie nie udało się") +
+        " — sprawdź, czy te dane działają na my.pcloud.com");
     blad.szczegoly = proby;   /* trafia do logu Sync */
     throw blad;
   }

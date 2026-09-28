@@ -1,4 +1,3 @@
-# Co nowego w Forestly GO v1.0.51
+# Co nowego w Forestly GO v1.0.52
 
-* pcloud 2FA fix
-
+- 
