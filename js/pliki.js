@@ -5,8 +5,15 @@
    przez natywne API i udostępnia wersję aplikacji. */
 "use strict";
 
-const NATYWNIE = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
-  window.Capacitor.isNativePlatform());
+function czyNatywnie() {
+  /* mostek Capacitora bywa wstrzykiwany dopiero w chwilę po starcie strony —
+     dlatego sprawdzamy zawsze na żywo, nie tylko raz przy ładowaniu */
+  try {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform &&
+      window.Capacitor.isNativePlatform());
+  } catch (e) { return false; }
+}
+const NATYWNIE = czyNatywnie();
 
 /* Wersja APK: w wydaniu workflow ustawia js/wersja.js = tag, więc w natywnej
    aplikacji WERSJA_APLIKACJI to zawsze wersja zainstalowanego APK. */
@@ -69,7 +76,7 @@ async function zapiszPlik(nazwa, blob) {
    zdarzeniami z wtyczki, po pobraniu od razu systemowy instalator.
    W przeglądarce (PWA) po prostu otwiera stronę pobierania. */
 async function pobierzIZainstalujApk(url, wersja) {
-  if (!NATYWNIE) { window.open(url, "_blank"); return; }
+  if (!czyNatywnie()) { window.open(url, "_blank"); return; }
   const Akt = window.Capacitor.Plugins.Aktualizacje;
   if (Akt && Akt.pobierz) {
     const nak = document.createElement("div");

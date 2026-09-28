@@ -1,24 +1,34 @@
-FORESTLY GO — v1.0.42: wybór folderu bez fałszywego błędu
-==========================================================
+FORESTLY GO — v1.0.43: jak znaleźć właściwą aplikację na telefonie
+==================================================================
 
-1. PRZYCISK „WYBIERZ FOLDER” W SYNC
-   Na telefonie, w wersji przeglądarkowej (PWA/ikona ze strony), Chrome
-   potrafi wystawiać API wyboru folderu, ale wybieracz się nie otwiera
-   — po kliknięciu był błąd „Nie udało się wybrać folderu (…user
-   aborted a request…)”. Teraz zamiast błędu pojawia się wyjaśnienie:
-   na telefonie folder wskażesz w aplikacji natywnej (APK ForestlyGO),
-   a w przeglądarce Excel pobierasz przyciskiem — folder nie jest
-   potrzebny.
+WAŻNE — DWIE IKONY „FORESTLY GO” NA TELEFONIE
+  Na telefonie mogą być DWIE ikony o tej samej nazwie:
+  1. skrót strony (PWA) — dodany przez Chrome / stara TWA — działa
+     w przeglądarce: BEZ wyboru folderu, aktualizacje przez
+     przeglądarkę;
+  2. APLIKACJA NATYWNA (APK) — zainstalowana z pliku ForestlyGO.apk —
+     tylko w niej działa wybór folderu (systemowy) i aktualizacja
+     z paskiem postępu w aplikacji.
 
-   WAŻNE: komunikat „user aborted” to też wskazówka diagnostyczna —
-   pojawia się TYLKO w wersji przeglądarkowej. W aplikacji natywnej
-   (APK) ten przycisk w ogóle nie używa przeglądarkowego API, tylko
-   systemowy wybór folderu Androida. Sprawdź w Sync → Urządzenie
-   wiersz „Tryb”: „APK (natywna)” czy „przeglądarka / PWA”.
+  Od tej wersji aplikacja natywna nazywa się na liście ikon
+  „ForestlyGO (APK)” — otwieraj TYLKO tę ikonę.
+  Skrótu strony nie trzeba kasować, ale jeśli przeszkadza —
+  przytrzymaj ikonę i usuń.
+
+  Samouczek: w zakładce Sync, karta Urządzenie, wiersz „Tryb” pokazuje,
+  gdzie działasz: „APK (natywna)” czy „przeglądarka / PWA”.
+  W przeglądarce na telefonie pojawia się tam podpowiedź.
+
+ZMIANY TECHNICZNE
+  - wykrywanie mostka Capacitora na żywo (przy każdym kliknięciu),
+  - rejestracja service workera z 1,5 s opóźnieniem i ponownym testem
+    (na wypadek późnego wstrzyknięcia mostka w APK).
 
 INSTALACJA
-  Zmiany tylko w plikach WWW — PWA podmieni się sama; APK wymaga
-  wydania wersji (release.bat / ForestlyGO Release).
+  Zmiany w plikach WWW i android/.../values/strings.xml (nazwa ikony) —
+  wymagane wydanie APK (release.bat / ForestlyGO Release).
 
 ZMIENIONE PLIKI
-  js/app.js, js/wersja.js, sw.js, RELEASE_NOTES.md, CO-CZYTAJ.txt
+  index.html bez zmian; js/app.js, js/pliki.js, js/wersja.js, sw.js,
+  android/app/src/main/res/values/strings.xml,
+  RELEASE_NOTES.md, CO-CZYTAJ.txt

@@ -97,10 +97,15 @@ let onbKrok = 0;
 const MOBILNY = /Android|iPhone|iPad/i.test(navigator.userAgent);
 const FOLDER_MOZLIWY = !!window.showDirectoryPicker && !MOBILNY && !NATYWNIE;
 /* natywny wybór folderu (Android, wtyczka Pliki) — działa też bez File System Access API */
-const FOLDER_NATYWNY = NATYWNIE && window.Capacitor && Capacitor.Plugins && !!Capacitor.Plugins.Pliki;
+function jestFolderNatywny() {
+  try {
+    return czyNatywnie() && window.Capacitor.Plugins && !!window.Capacitor.Plugins.Pliki;
+  } catch (e) { return false; }
+}
+const FOLDER_NATYWNY = jestFolderNatywny();   /* tylko do warunków na starcie */
 async function wybierzFolder() {
-  if (FOLDER_NATYWNY) {
-    const r = await Capacitor.Plugins.Pliki.wybierzFolder();
+  if (jestFolderNatywny()) {
+    const r = await window.Capacitor.Plugins.Pliki.wybierzFolder();
     return { uri: r.uri, nazwa: r.nazwa, natywny: true };
   }
   if (window.showDirectoryPicker) {
@@ -137,7 +142,7 @@ function renderOnb() {
       <button type="button" class="fab" id="onb-dalej" style="margin-top:10px">Dalej →</button>
       <button type="button" class="fab szary" id="onb-przywroc" style="margin-top:8px">Mam backup — przywróć sesję</button>`);
   } else if (onbKrok === 1) {
-    if (FOLDER_MOZLIWY || FOLDER_NATYWNY) {
+    if (FOLDER_MOZLIWY || jestFolderNatywny()) {
       html.push(`<h3>Gdzie zapisywać pliki?</h3>
         <p>Wskaż folder na tym urządzeniu — Excel z opisami będzie tam widoczny także dla innych aplikacji.</p>
         <button type="button" class="fab" id="onb-folder">Wybierz folder</button>
@@ -767,9 +772,12 @@ $("#btn-nowy").addEventListener("click", () => { trybEdycji = null; stan = nowyS
 $("#ab-obreb").addEventListener("click", () => przelaczTab("wsie"));
 
 /* ---------- aktualizacja APK (działa tylko w aplikacji Android) ---------- */
-const APK_WERSJA = NATYWNIE
-  ? String(typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "").replace(/^v/, "")
-  : (new URLSearchParams(location.search).get("apk_wersja") || "");
+function apkWersja() {
+  return czyNatywnie()
+    ? String(typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "").replace(/^v/, "")
+    : (new URLSearchParams(location.search).get("apk_wersja") || "");
+}
+const APK_WERSJA = apkWersja();
 function porownajWersje(a, b) {
   const A = String(a).split(".").map(Number), B = String(b).split(".").map(Number);
   for (let i = 0; i < Math.max(A.length, B.length); i++) {
@@ -790,7 +798,7 @@ function banerAktualizacji(wersja, url) {
   const a = document.createElement("a");
   a.href = url; a.target = "_blank"; a.rel = "noopener";
   a.textContent = "Pobierz aktualizację";
-  if (NATYWNIE) a.addEventListener("click", e => {
+  if (czyNatywnie()) a.addEventListener("click", e => {
     e.preventDefault();
     pobierzIZainstalujApk(url, wersja);
   });
@@ -803,11 +811,12 @@ function banerAktualizacji(wersja, url) {
   document.body.appendChild(el);
 }
 async function sprawdzAktualizacjeApk() {
-  if (!APK_WERSJA) return; // zwykła przeglądarka — nic do sprawdzania
+  const mojaApk = apkWersja();
+  if (!mojaApk) return; // zwykła przeglądarka — nic do sprawdzania
   try {
     // zapamiętana dostępna wersja pokazuje baner od razu, bez odpytywania API
     const pamietana = localStorage.getItem("apk_dostepna") || "";
-    if (pamietana && porownajWersje(pamietana, APK_WERSJA) > 0 &&
+    if (pamietana && porownajWersje(pamietana, mojaApk) > 0 &&
         pamietana !== localStorage.getItem("apk_omin")) {
       const u = localStorage.getItem("apk_url") || "https://github.com/wskakuj/forestly-go/releases/latest";
       banerAktualizacji(pamietana, u);
@@ -820,7 +829,7 @@ async function sprawdzAktualizacjeApk() {
     if (!r.ok) return;
     const rel = await r.json();
     const najnowsza = (rel.tag_name || "").replace(/^v/, "");
-    if (!najnowsza || porownajWersje(najnowsza, APK_WERSJA) <= 0) {
+    if (!najnowsza || porownajWersje(najnowsza, mojaApk) <= 0) {
       localStorage.removeItem("apk_dostepna"); return;
     }
     const apk = (rel.assets || []).find(a => a.name === "ForestlyGO.apk");
@@ -841,7 +850,21 @@ async function rysujSync() {
   $("#btn-folder").style.display = "";   /* zawsze widoczny — klik sam wyjaśnia ograniczenia */
   $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?");
   const sTryb = $("#s-tryb");
-  if (sTryb) sTryb.textContent = NATYWNIE ? "APK (natywna)" : "przeglądarka / PWA";
+  if (sTryb) {
+    sTryb.textContent = czyNatywnie() ? "APK (natywna)" : "przeglądarka / PWA";
+    let nota = document.getElementById("s-tryb-nota");
+    if (!czyNatywnie() && MOBILNY) {
+      if (!nota) {
+        nota = document.createElement("div");
+        nota.id = "s-tryb-nota";
+        nota.className = "s-notka";
+        sTryb.parentElement.insertBefore(nota, sTryb.nextSibling);
+      }
+      nota.textContent = "Ten skrót strony działa w przeglądarce — dlatego folderu nie da się wskazać. " +
+        "Zamknij i otwórz ikonę „ForestlyGO (APK)” z listy aplikacji: to zainstalowana aplikacja, " +
+        "w niej wybór folderu i aktualizacje działają w aplikacji.";
+    } else if (nota) nota.remove();
+  }
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
   odswiezBackupKarte();
@@ -1046,7 +1069,7 @@ $("#btn-backup-plik").addEventListener("click", async () => {
 /* jedno przywracanie: na komputerze wskazujesz folder, na telefonie
    od razu plik backupu (Android nie umie wskazywać folderów) */
 $("#btn-backup-przywroc").addEventListener("click", async () => {
-  if (window.showDirectoryPicker || FOLDER_NATYWNY) {
+  if (window.showDirectoryPicker || jestFolderNatywny()) {
     try {
       const dir = await wybierzFolder();
       await DB.metaSet("folder", dir);
@@ -1183,7 +1206,7 @@ async function sprawdzAktualizacjeRecznie() {
   const bylTekst = btn ? btn.textContent : "";
   if (btn) { btn.disabled = true; btn.textContent = "Sprawdzam…"; }
   const wroc = () => { if (btn) { btn.disabled = false; btn.textContent = bylTekst; } };
-  const moja = APK_WERSJA || (typeof WERSJA_APLIKACJI !== "undefined" ? String(WERSJA_APLIKACJI).replace(/^v/, "") : "");
+  const moja = apkWersja() || (typeof WERSJA_APLIKACJI !== "undefined" ? String(WERSJA_APLIKACJI).replace(/^v/, "") : "");
   if (!moja) { toast("Nie znam wersji aplikacji"); wroc(); return; }
   try {
     // wymuszamy świeże sprawdzenie — pomijamy 6-godzinny limit
@@ -1206,7 +1229,7 @@ async function sprawdzAktualizacjeRecznie() {
     const url = apk ? apk.browser_download_url : (rel.html_url || "");
     localStorage.setItem("apk_url", url);
     CLOUDS.log("<b>dostępna nowa wersja</b> " + najnowsza + " (masz " + moja + ")");
-    if (!APK_WERSJA) {
+    if (!apkWersja()) {
       // przeglądarka / PWA — aktualizuje się sama przez service workera
       if ("serviceWorker" in navigator && !NATYWNIE) {
         const reg = await navigator.serviceWorker.getRegistration();
@@ -1261,7 +1284,7 @@ async function start() {
   await odswiezListeWsi();
   // dokończenie instalacji, jeśli była pobrana, a brakowało zgody systemowej
   const apkCache = localStorage.getItem("apk_cache_uri");
-  if (NATYWNIE && apkCache) {
+  if (czyNatywnie() && apkCache) {
     const Akt = window.Capacitor.Plugins.Aktualizacje;
     const wersjaApk = localStorage.getItem("apk_cache_wersja") || "";
     if (Akt) {
@@ -1276,7 +1299,8 @@ async function start() {
   }
   bindOnbKeys();
   odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur(); sprawdzAktualizacjeApk();
-  if ("serviceWorker" in navigator && !NATYWNIE) {
+  setTimeout(() => {
+  if (!("serviceWorker" in navigator) || czyNatywnie()) return;
     // przeładuj od razu, gdy NOWA wersja aplikacji przejmuje kontrolę
     // (ale nie przy pierwszej instalacji — wtedy przejmowanie jest normalne)
     const mialKontrolera = !!navigator.serviceWorker.controller;
@@ -1289,7 +1313,7 @@ async function start() {
     // Chrome sam sprawdza aktualizacje SW najwyżej raz na 24 h —
     // wymuszamy sprawdzanie przy KAŻDYM otwarciu aplikacji.
     navigator.serviceWorker.ready.then(r => r.update()).catch(() => {});
-  }
+  }, 1500);
 
   $("#in-wies").addEventListener("change", async e => {
     await DB.metaSet("ostatniaWies", e.target.value);
