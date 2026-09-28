@@ -170,7 +170,7 @@
       <div class="f-sekcja">
         <div class="f-sek-nag">📌 Lokalizacja</div>
         <div class="loc">
-          <button type="button" class="loc-btn" id="btn-gps">📡 Tu stoję (GPS)</button>
+          <button type="button" class="loc-btn" id="btn-gps">📡 Moje współrzędne</button>
           <button type="button" class="loc-btn" id="btn-mapa">📍 Pinezka na mapie</button>
         </div>
         <div class="loc-info" id="loc-info">brak lokalizacji</div>
@@ -193,10 +193,10 @@
   <div class="pane" id="pane-mapa">
     <div id="mapa-leaflet"></div>
     <div class="mapa-pasek">
-      <button type="button" class="loc-btn" id="btn-gps2">📡 Tu stoję (GPS)</button>
+      <button type="button" class="loc-btn" id="btn-gps2">📡 Moje współrzędne</button>
       <label class="mapa-przel"><input type="checkbox" id="mapa-drogi" checked> drogi i nazwy</label>
-      <button type="button" class="loc-btn" id="mapa-tryb">🗺 Zwykła</button>
-      <button type="button" class="loc-btn" id="btn-pozycja">◉ Tu jestem</button>
+      <button type="button" class="loc-btn" id="mapa-tryb">🗺 OpenStreet</button>
+      <button type="button" class="loc-btn" id="btn-pozycja">◉ Moja pozycja</button>
       <span class="mapa-info" id="mapa-info">kliknij mapę, aby postawić pinezkę</span>
       <button type="button" class="fab mini" id="btn-pin-do-opisu" disabled>Użyj pinezki w opisie</button>
     </div>
@@ -339,6 +339,7 @@
             <input class="f-input" id="pc-pass" type="password" placeholder="hasło pCloud" autocomplete="off">
             <input class="f-input" id="pc-kod" inputmode="numeric" placeholder="kod z SMS (tylko przy 2FA)" autocomplete="off">
             <input class="f-input" id="pc-path" placeholder="/FORESTLY BAZA" autocomplete="off">
+            <div class="s-notka" id="pc-status" style="margin:2px 0 8px">niezalogowany</div>
             <div class="s-akcje"><button type="button" class="loc-btn" id="btn-pc-zaloguj">Zaloguj</button>
             <button type="button" class="loc-btn" id="btn-pc-test">Testuj</button>
             <button type="button" class="loc-btn" id="btn-pc-save">Zapisz folder</button></div>

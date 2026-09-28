@@ -549,7 +549,7 @@ function przelaczTrybMapy(tryb, cicho) {
     if (!cicho) toast("Mapa satelitarna");
   }
   const btn = $("#mapa-tryb");
-  if (btn) btn.textContent = tryb === "sat" ? "🗺 Zwykła" : "🛰 Satelita";
+  if (btn) btn.textContent = tryb === "sat" ? "🗺 OpenStreet" : "🛰 Satelita";
 }
 let znacznikPozycji = null, ostatniaPozycja = null;
 /* nasza pozycja z GPS — niebieska kropka na mapie */
@@ -962,6 +962,15 @@ async function wczytajKonfigChmur() {
      wywalał całe wczytywanie konfiguracji chmur przy starcie */
   const pcToken = $("#pc-token"); if (pcToken) pcToken.value = pc.token || "";
   $("#pc-path").value = pc.path || "/Taksator";
+<<<<<<< Updated upstream
+=======
+  const pcStat = $("#pc-status");
+  if (pcStat) pcStat.innerHTML = pc.token
+    ? '<span class="chm-tak">✓</span> zalogowany jako <b>' + (pc.email || "?") + '</b> — serwer ' +
+      (pc.host === "eapi.pcloud.com" ? "europejski (eapi)" : "amerykański (api)") +
+      ', folder: ' + (pc.path || "/Taksator")
+    : 'niezalogowany — wpisz e-mail i hasło pCloud i dotknij „Zaloguj”';
+>>>>>>> Stashed changes
   const gd = await DB.metaGet("gdrive") || {};
   $("#gd-folder").value = gd.folder || "FORESTLY GO";
 }
@@ -1018,7 +1027,17 @@ $("#btn-pc-zaloguj").addEventListener("click", async () => {
     CLOUDS.log("<b>zalogowano</b> do pCloud — " + r.email +
       ", folder: " + ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
     rysujSync(); resetujStatusPolaczenia();
+<<<<<<< Updated upstream
   } catch (e) { toast(String(e.message || e)); }
+=======
+  } catch (e) {
+    toast(String(e.message || e));
+    /* szczegóły (po jakim serwerze, jaki kod błędu) — do logu Sync,
+       żeby przy następnym podejściu wiedzieć dokładnie co się stało */
+    CLOUDS.log("pCloud <b>logowanie nie wyszło</b>: " + (e.message || e) +
+      (e.szczegoly && e.szczegoly.length ? " — próby: " + e.szczegoly.join("; ") : ""));
+  }
+>>>>>>> Stashed changes
 });
 $("#btn-pc-save").addEventListener("click", async () => {
   const stara = await DB.metaGet("pcloud") || {};

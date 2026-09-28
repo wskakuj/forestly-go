@@ -91,8 +91,11 @@ button { font-family: var(--font-body); }
 .wies-card small { display: block; margin-top: 5px; font: 500 10.5px var(--font-mono); color: var(--dim); }
 .wies-nowa { border: 1.5px dashed var(--line2); background: transparent; color: var(--dim); }
 .wies-nowa:hover { border-color: var(--accent); color: var(--accent); }
-.powrot-link { display: inline-block; font: 600 11.5px var(--font-mono); color: var(--accent);
-  cursor: pointer; user-select: none; margin: 0 2px 10px; }
+.powrot-link { display: inline-flex; align-items: center; gap: 7px; font: 600 12px var(--font-mono);
+  color: var(--accent); background: rgba(45, 212, 167, .1); border: 1.5px solid rgba(45, 212, 167, .45);
+  border-radius: 999px; padding: 8px 16px; cursor: pointer; user-select: none; margin: 0 0 12px;
+  transition: background .15s, border-color .15s; }
+.powrot-link:active, .powrot-link:hover { background: rgba(45, 212, 167, .22); border-color: var(--accent); }
 
 /* ---------- wykaz ---------- */
 .wies-naglowek { font: 700 12px var(--font-mono); color: var(--dim); letter-spacing: .08em;

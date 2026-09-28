@@ -86,6 +86,7 @@ const CLOUDS = (() => {
       const d = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(t));
       return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("");
     };
+    const proby = [];   /* diagnostyka: co odpowiedział każdy serwer */
     let ostatniBlad = null;
     for (const host of ["api.pcloud.com", "eapi.pcloud.com"]) {
       const baza = "https://" + host + "/userinfo?getauth=1&logout=1&authexpire=63072000" +
@@ -105,10 +106,17 @@ const CLOUDS = (() => {
       } catch (e) { /* następna próba */ }
       /* próba 2: zwykłe hasło po HTTPS (tak loguje oficjalne SDK pCloud) */
       if (!dane || dane.result !== 0 || !dane.auth) {
-        const r3 = await fetch(baza + "&password=" + encodeURIComponent(haslo));
-        dane = await r3.json().catch(() => ({}));
+        try {
+          const r3 = await fetch(baza + "&password=" + encodeURIComponent(haslo));
+          dane = await r3.json().catch(() => ({}));
+        } catch (e) {
+          /* TypeError = żądanie w ogóle nie doszło (sieć / blokada przeglądarki) */
+          proby.push(host + ": brak połączenia (" + (e.name === "TypeError" ? "sieć/CORS" : e.message) + ")");
+          continue;
+        }
       }
       if (dane.result === 0 && dane.auth) return { token: dane.auth, email: dane.email, host };
+      proby.push(host + ": odpowiedź " + dane.result + (dane.error ? " (" + dane.error + ")" : ""));
       if (dane.result === 4000) throw new Error("pCloud: zbyt wiele prób logowania — " +
         "odczekaj około godzinę i spróbuj jeszcze raz (raz)");
       /* konto z kodem dwuetapowym (2FA) — serwer żąda kodu */
@@ -117,8 +125,10 @@ const CLOUDS = (() => {
           "w pole \"kod\" poniżej hasła i zaloguj się ponownie");
       ostatniBlad = dane;
     }
-    throw new Error("pCloud: " + ((ostatniBlad && ostatniBlad.error) || "logowanie nie udało się") +
+    const blad = new Error("pCloud: " + ((ostatniBlad && ostatniBlad.error) || "logowanie nie udało się") +
       " — sprawdź, czy te dane działają na my.pcloud.com");
+    blad.szczegoly = proby;   /* trafia do logu Sync */
+    throw blad;
   }
   async function pcloudUpload(cfg, nazwa, blob) {
     const sciezka = cfg.path || "/Taksator";
