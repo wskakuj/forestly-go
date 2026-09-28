@@ -7,7 +7,7 @@
 <!-- wersja tego pliku HTML — samonaprawa w app.js porównuje ją z wersją
      skryptów; przy niezgodności (aktualizacja w tle podała miks plików)
      strona przeładowuje się RAZ i dostaje spójny komplet -->
-<script>window.__htmlWersja = "1.0.56";</script>
+<script>window.__htmlWersja = "1.0.57";</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -48,6 +48,7 @@
   <!-- ---------- WYKAZ ---------- -->
   <div class="pane" id="pane-wykaz">
     <div class="scroller">
+      <input id="wykaz-szukaj" class="f-input" style="width:100%;box-sizing:border-box;margin:0 0 10px" placeholder="🔍 szukaj — oddział, wieś, gatunek…" autocomplete="off" />
       <div id="wykaz-lista"></div>
       <button class="fab" id="btn-nowy">+ Nowy opis</button>
     </div>
@@ -375,7 +376,6 @@
 <script src="js/xlsx-io.js"></script>
 <script src="js/clouds.js"></script>
 <script src="js/session.js"></script>
-<script src="js/sekret.js"></script>
 <script src="js/wersja.js"></script>
 <script src="js/pliki.js"></script>
 <script src="js/app.js"></script>

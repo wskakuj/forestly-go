@@ -399,3 +399,10 @@ button { font-family: var(--font-body); }
 .braki-tresc li { color: var(--orange); font-weight: 600; padding: 5px 0 5px 22px; position: relative; }
 .braki-tresc li::before { content: "—"; position: absolute; left: 4px; color: var(--dim); }
 .braki-akcje { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 16px; }
+
+/* v1.0.57 — duplikowanie wpisu w wykazie */
+.ri-dup { border: 0; background: none; color: var(--blue); font-size: 15px; padding: 4px 6px; cursor: pointer; }
+/* v1.0.57 — baner auto-wysyłki na pulpicie wsi */
+.auto-wysylka-baner { margin: 0 0 10px; padding: 9px 12px; border-radius: 10px;
+  background: rgba(56, 189, 248, .12); border: 1px solid rgba(56, 189, 248, .35);
+  font-size: 13px; }

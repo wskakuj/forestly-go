@@ -1,39 +1,57 @@
-FORESTLY GO v1.0.56 — zmiana nazwy aplikacji
-===========================================
+FORESTLY GO v1.0.57 — duplikowanie, auto-wysyłka, szukajka + nazwa
+==================================================================
+
+UWAGA: ta paczka ZAWIERA też całą zmianę nazwy z v1.0.56 — jeśli nie
+wydałeś jeszcze v1.0.56, wydaj od razu v1.0.57 (pomiń v1.0.56).
 
 CO NOWEGO
-  1. NAZWA APLIKACJI: „ForestlyGO (APK)" → „FORESTLY GO"
-     - ikona na liście aplikacji Android pokaże teraz „FORESTLY GO",
-     - nazwa widoczna też w konfiguracji Capacitora i tekstach aplikacji
-       (logowanie Google, polityka prywatności, pobieranie aktualizacji,
-       komunikaty o folderze).
-     NIE zmienione (celowo — żeby nic się nie zepsuło):
-     - identyfikator aplikacji com.wskakuj.forestlygo (aktualizacje
-       instalują się normalnie „na staryą" aplikację, dane zostają),
-     - nazwa pliku APK (ForestlyGO.apk) i prefiks plików sesji
-       (ForestlyGO_sesja_) — po nich szukają aktualizator i sesje,
-     - nazwa urządzenia w pCloud.
+  1. DUPLIKOWANIE WYDZIELENIA (przycisk ⧉ w Wykazie)
+     Klikasz ⧉ przy wpisie → otwiera się formularz nowego opisu z
+     przekopiowanym WSZYSTKIM (wieś, siedlisko, skład, wiek, zwarcie,
+     podszyt…), ALE bez numeru wydzielenia i lokalizacji — te uzupełniasz
+     dla nowego wydzielenia i zapisujesz. Pomyślane o podobnych,
+     sąsiadujących wydzieleniach.
 
-  2. NAPRAWA ROZEJŚCIA WERSJI: na GitHubie był index.html 1.0.55,
-     a wersja.js v1.0.54 — samonaprawa przeładowywała aplikację raz
-     na sesję. Teraz oba mówią 1.0.56, a release.py przy każdym
-     wydaniu sam podmienia __htmlWersja w index.html oraz wersję
-     cache w sw.js — już się nie rozjadą.
+  2. AUTOMATYCZNA WYSYŁKA
+     Wpisy „lokalne” i „w kolejce” wysyłają się SAME do chmury:
+     - ok. 12 s po zapisie opisu,
+     - 3 s po powrocie internetu (wychodzisz z lasu, telefon łapie
+       zasięg — i leci),
+     - 10 s po uruchomieniu aplikacji.
+     Wysyłka idzie całą wsią, tak jak przyciskiem „Wyślij” — plik Excel
+     w chmurze ODŚWIEŻA SIĘ o nowe i poprawione wpisy (tak ma być).
+     Przy nieudanej próbie (np. słaby zasięg) próbuje dalej co 5 minut.
+     Krótki toast i wpis w dzienniku Sync — nic nie przeszkadza w pracy.
+     Działa tylko przy skonfigurowanej chmurze (pCloud / Dysk Google).
 
-  UWAGA
-  Nowa nazwa na ikonie pojawi się dopiero po zainstalowaniu NOWEGO
-  APK z release'u (aktualizacja „w aplikacji" podmienia tylko pliki
-  strony, nie nazwę ikony). Zainstaluj APK z release'u v1.0.56
-  ręcznie raz — dane (wpisy, logowania) zostają.
+  3. LICZNIK NIEWYSŁANYCH na pulpicie wsi ( Wieś )
+     Niebieski pasek „⬆ Do wysłania: N wpisów — wyślę automatycznie,
+     gdy będzie zasięg”. Znika, gdy wszystko dojdzie do chmury.
+     (Sama koncepcja: wpisy siedzą w pamięci przeglądarki aplikacji —
+     dopóki nie trafią do chmury, żyją tylko na telefonie. Licznik
+     mówi wprost, ile ich jeszcze tam siedzi.)
 
-ZMIENIONE PLIKI
-  android/app/src/main/res/values/strings.xml
+  4. SZUKAJKA w Wykazie — filtruje po numerze wydzielenia, wsi
+     i opisie drzewostanu (np. „12a”, „sośnina”, nazwa wsi).
+
+  5. ZMIANA NAZWY APLIKACJI (z v1.0.56): „FORESTLY GO” na ikonie
+     Androida (zamiast „ForestlyGO (APK)”) + spójne teksty aplikacji.
+     Nowa nazwa na ikonie pojawi się po zainstalowaniu APK z release'u
+     (aktualizacja „w aplikacji” podmienia tylko pliki strony).
+
+  6. SPRZĄTANIE: usunięto martwe odwołanie do js/sekret.js (404
+     w konsoli), naprawione rozjechanie wersji 1.0.55/1.0.54 (extra
+     przeładowanie raz na sesję), release.py pilnuje zgodności wersji
+     i cache przy każdym wydaniu.
+
+ZMIENIONE PLIKI (względem v1.0.55)
+  index.html, js/app.js, js/wersja.js, js/pliki.js, css/app.css,
+  sw.js, oauth.html, polityka-prywatnosci.html, release.html,
+  release.py, capacitor.config.json,
+  android/app/src/main/res/values/strings.xml,
   android/app/src/main/assets/capacitor.config.json
-  capacitor.config.json
-  js/wersja.js, js/app.js, js/pliki.js, sw.js, index.html
-  oauth.html, polityka-prywatnosci.html, release.html
-  release.py
 
-WYDANIE (jak zwykle)
-  Skopiuj pliki do repo, potem: python release.py  →  nowy tag
-  → Actions zbudują APK „FORESTLY GO".
+WYDANIE
+  Skopiuj pliki do repo i wydaj: python release.py → v1.0.57 → APK
+  „FORESTLY GO” z Actions. Pierwszy raz po instalacji APK ikona zmieni
+  nazwę; dane (wpisy, logowania) zostają.

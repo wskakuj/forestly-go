@@ -60,6 +60,11 @@ async function rysujPulpitWsi() {
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
   const box = $("#wies-grid");
+  const nieslane = wszystkie.filter(x => x.status !== "wyslany").length;
+  const baner = nieslane ? `<div class="auto-wysylka-baner">⬆ Do wysłania: <b>${nieslane}</b> ` +
+    (nieslane === 1 ? "wpis" : (nieslane % 10 >= 2 && nieslane % 10 <= 4 &&
+      (nieslane % 100 < 10 || nieslane % 100 >= 20) ? "wpisy" : "wpisów")) +
+    " — wyślę automatycznie, gdy będzie zasięg</div>" : "";
   const karty = wsie.map(w => {
     const ile = wszystkie.filter(x => x.wies === w).length;
     const wyslane = wszystkie.filter(x => x.wies === w && x.status === "wyslany").length;
@@ -69,7 +74,7 @@ async function rysujPulpitWsi() {
       <small>${wyslane === ile ? "wszystko wysłane ✓" : "do wysłania: " + (ile - wyslane)}</small>
     </div>`;
   }).join("");
-  box.innerHTML = (wsie.length ? karty : '<div class="pulpit-info" style="text-align:center;margin-top:24vh">— jeszcze nic nie zebrane —</div>') +
+  box.innerHTML = baner + (wsie.length ? karty : '<div class="pulpit-info" style="text-align:center;margin-top:24vh">— jeszcze nic nie zebrane —</div>') +
     `<div class="wies-card wies-nowa" id="wies-nowa">
       <div class="wc-gora"><span class="wc-ikona">＋</span></div>
       <b>Nowa wieś</b><small>nazwę wpiszesz przy pierwszym opisie</small>
@@ -724,6 +729,7 @@ async function zapiszWpis(pominWalidacje) {
   odswiezAppbar();
   przelaczTab("wykaz");
   rysujWykaz();
+  zaplanujAutoWysylke();   /* jest zasięg? za chwilę samo poleci do chmury */
 }
 /* braki w opisie: pola, które powinny być wypełnione
    (opcjonalne — pjd, drugi gatunek, elementy taksacyjne, wskazania —
@@ -784,29 +790,37 @@ async function rysujWykaz() {
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
   const box = $("#wykaz-lista");
+  /* szukajka: filtr po numerze wydzielenia, wsi i opisie drzewostanu */
+  const szEl = document.getElementById("wykaz-szukaj");
+  const q = (szEl ? szEl.value : "").trim().toLowerCase();
+  const pasuje = x => !q || ((x.wies || "") + " " + identyfikatorWpisu(x) + " " +
+    OPTAX.jednaLinia(x)).toLowerCase().includes(q);
   const naglowek = aktywnaWies ? '<span class="powrot-link" id="powrot-wsie">← wszystkie wsie</span>' : "";
   if (aktywnaWies) {
-    const wpisy = wszystkie.filter(x => x.wies === aktywnaWies);
-    box.innerHTML = naglowek + `<div class="wies-naglowek">${aktywnaWies} · ${wpisy.length}</div>` +
-      wpisy.map(x => `<div class="row-item" data-id="${x.id}">
+    const wpisy = wszystkie.filter(x => x.wies === aktywnaWies && pasuje(x));
+    box.innerHTML = naglowek + '<div class="wies-naglowek">' + aktywnaWies + ' · ' + wpisy.length + '</div>' +
+      (wpisy.length ? wpisy.map(x => `<div class="row-item" data-id="${x.id}">
         <div class="ri-oddz">${identyfikatorWpisu(x)}</div>
         <div class="ri-main"><b>${OPTAX.jednaLinia(x).slice(0, 60)}</b><small>${x.timestamp.slice(0, 10)} · v${x.wersja || 1}</small></div>
         ${x.status === "wyslany" ? '<span class="st ok">wysłany</span>' : '<span class="st local">lokalny</span>'}
+        <button class="ri-dup" data-dup="${x.id}" title="zduplikuj (podobne wydzielenie)">⧉</button>
         <button class="ri-del" data-del="${x.id}" title="usuń">×</button>
-      </div>`).join("");
+      </div>`).join("") : '<div class="wies-naglowek" style="text-align:center;opacity:.6">— brak wyników —</div>');
   } else if (!wsie.length) {
     box.innerHTML = '<div class="wies-naglowek" style="text-align:center;margin-top:30vh">— jeszcze nic nie zebrane —</div>';
   } else {
     box.innerHTML = wsie.map(w => {
-      const wpisy = wszystkie.filter(x => x.wies === w);
+      const wpisy = wszystkie.filter(x => x.wies === w && pasuje(x));
+      if (!wpisy.length) return "";
       return `<div class="wies-naglowek">${w} · ${wpisy.length}</div>` +
         wpisy.map(x => `<div class="row-item" data-id="${x.id}">
           <div class="ri-oddz">${identyfikatorWpisu(x)}</div>
           <div class="ri-main"><b>${OPTAX.jednaLinia(x).slice(0, 60)}</b><small>${x.timestamp.slice(0, 10)} · v${x.wersja || 1}</small></div>
           ${x.status === "wyslany" ? '<span class="st ok">wysłany</span>' : '<span class="st local">lokalny</span>'}
+          <button class="ri-dup" data-dup="${x.id}" title="zduplikuj (podobne wydzielenie)">⧉</button>
           <button class="ri-del" data-del="${x.id}" title="usuń">×</button>
         </div>`).join("");
-    }).join("");
+    }).join("") || '<div class="wies-naglowek" style="text-align:center;opacity:.6">— brak wyników —</div>';
   }
   odswiezAppbar();
 }
@@ -818,6 +832,25 @@ $("#wykaz-lista").addEventListener("click", async e => {
     await DB.wpisyDelete(del.dataset.del);
     SESJA.zapiszZLogiem();
     rysujWykaz(); toast("Wpis usunięty");
+    return;
+  }
+  /* duplikowanie: kopia wpisu do edycji — bez numeru wydzielenia
+     i lokalizacji (to są rzeczy nowego wydzielenia), reszta pól zostaje */
+  const dup = e.target.closest("[data-dup]");
+  if (dup) {
+    e.stopPropagation();
+    const w = (await DB.wpisyAll()).find(x => x.id === dup.dataset.dup);
+    if (!w) return;
+    const kopia = Object.assign(nowyStan(), w, {
+      dzialki: [], lat: null, lon: null, locZrodlo: null,
+      wersja: 1, status: "lokalny",
+      ostatniaWysylka: undefined, poprawionyPoWyslce: undefined
+    });
+    delete kopia.id; delete kopia.timestamp;
+    trybEdycji = null; stan = kopia;
+    if (w.wies) { aktywnaWies = w.wies; localStorage.setItem("aktywnaWies", aktywnaWies); }
+    uzupelnijForm(); rysuj(); przelaczTab("form");
+    toast("Kopia wydzielenia — uzupełnij numer wydzielenia i zapisz", 6000);
     return;
   }
   const item = e.target.closest(".row-item");
@@ -1254,6 +1287,57 @@ async function wyslijWies(wies, cicho) {
   rysujSync();
 }
 
+/* ---------- automatyczna wysyłka ----------
+   Wpisy „lokalne” i „w kolejce” wysyłają się same — po zapisie opisu,
+   po powrocie internetu i po uruchomieniu aplikacji. Wysyłka idzie
+   całą wsią (plik w chmurze odświeża się o nowe/poprawione wpisy),
+   cicho: krótki toast i wpis w dzienniku, nic nie przeszkadza
+   w pracy w formularzu. Działa tylko przy skonfigurowanej chmurze. */
+let autoWysylkaTimer = null, autoWysylkaTrwa = false;
+function zaplanujAutoWysylke(ms) {
+  if (autoWysylkaTimer) clearTimeout(autoWysylkaTimer);
+  autoWysylkaTimer = setTimeout(autoWysylkaStart, ms == null ? 12000 : ms);
+}
+async function autoWysylkaStart() {
+  autoWysylkaTimer = null;
+  if (autoWysylkaTrwa || typeof CLOUDS === "undefined" || !navigator.onLine) return;
+  autoWysylkaTrwa = true;
+  try {
+    const [pc, gd, nc] = await Promise.all(
+      [DB.metaGet("pcloud"), DB.metaGet("gdrive"), DB.metaGet("nextcloud")]);
+    const saChmury = (pc && pc.token) || (gd && gd.refreshToken) || (nc && nc.url);
+    if (!saChmury) return;
+    const wsie = [...new Set((await DB.wpisyAll())
+      .filter(w => w.status !== "wyslany" && w.wies).map(w => w.wies))];
+    if (!wsie.length) return;
+    let ok = 0, nie = 0;
+    for (const wies of wsie) {
+      try {
+        const r = await CLOUDS.synchronizujWies(null, wies);
+        ok++;
+        CLOUDS.log("<b>auto-wysyłka</b> — " + r.nazwa + " (" + r.ile + " wpisów)");
+      } catch (e) {
+        if (String(e && e.message || e).includes("brak skonfigurowanych")) return;
+        nie++;
+        CLOUDS.log("⚠ auto-wysyłka " + wies + ": " + (e && e.message || e));
+      }
+    }
+    if (ok) {
+      toast("Auto-wysyłka: " + (ok === 1 ? "1 wieś" : ok + " wsi") + " wysłane ✓", 5000);
+      SESJA.zapiszZLogiem();
+    }
+    if (ok || nie) { rysujWykaz(); rysujPulpitWsi(); }
+    if (nie) zaplanujAutoWysylke(5 * 60 * 1000);   /* jeszcze raz za 5 minut */
+  } finally { autoWysylkaTrwa = false; }
+}
+window.addEventListener("online", () => zaplanujAutoWysylke(3000));
+/* szukajka w wykazie (warunkowo — na wypadek mieszanych plików po
+   aktualizacji w tle, patrz lekcja z v1.0.50) */
+(function bindSzukajki() {
+  const sz = document.getElementById("wykaz-szukaj");
+  if (sz) sz.addEventListener("input", () => rysujWykaz());
+})();
+
 /* ---------- nawigacja ---------- */
 $("#bnav").addEventListener("click", e => {
   const bn = e.target.closest(".bn");
@@ -1469,6 +1553,7 @@ async function start() {
 async function odswiezStart() {
   await odswiezListeWsi();
   odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur();
+  zaplanujAutoWysylke(10000);   /* start z zasięgiem? wyślij to, co zostało w lesie */
 }
 function bindOnbKeys() {
   // obsługa Enter w kreatorze — delegowana
