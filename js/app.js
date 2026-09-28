@@ -397,6 +397,22 @@ function pvToggle() {
 }
 $("#pv-chev").addEventListener("click", pvToggle);
 
+/* pasek zapisu: podsumowanie na żywo + postęp pól obowiązkowych */
+function odswiezPasekZapisu() {
+  const suma = $("#zp-suma"), sub = $("#zp-suma-sub"), postep = $("#zp-postep");
+  if (!suma) return;
+  suma.textContent = (stan.wies || "— wybierz wieś") + " · " +
+    (stan.dzialki.length ? stan.dzialki.join(", ") : "— nr wydz.");
+  const drzewa = [stan.panujacy, stan.drugi].filter(Boolean).join(" + ") || "—";
+  sub.textContent = (stan.siedlisko || "—") + " · " + drzewa +
+    (stan.zwarcie ? " · " + stan.zwarcie : "");
+  const spelnione = [!!stan.wies, stan.dzialki.length > 0, !!stan.siedlisko, !!stan.panujacy];
+  const ile = spelnione.filter(Boolean).length;
+  if (postep) {
+    postep.innerHTML = spelnione.map(ok => '<i class="' + (ok ? "on" : "") + '"></i>').join("");
+    postep.title = "uzupełniono " + ile + " z 4 pól obowiązkowych";
+  }
+}
 function rysuj() {
   $("#wiek-linia").textContent = (stan.wiekPrzec - OPTAX.KROK) + "–" + (stan.wiekPrzec + OPTAX.KROK) + " / " + stan.wiekPrzec + " l";
   $("#wiek-klasa").textContent = "klasa wieku " + OPTAX.klasaWieku(stan.wiekPrzec);
@@ -416,6 +432,7 @@ function rysuj() {
   loc.textContent = stan.lat != null
     ? stan.lat.toFixed(5) + "° N · " + stan.lon.toFixed(5) + "° E · " + (stan.locZrodlo || "")
     : "brak lokalizacji";
+  odswiezPasekZapisu();
   odswiezAppbar();
 }
 

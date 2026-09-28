@@ -53,107 +53,122 @@
   <div class="pane" id="pane-form">
     <div class="scroller">
 
-      <div class="f-group">
-        <div class="f-label">Obręb / wieś <span class="sub">plik Excel grupuje się po tym polu</span></div>
-        <div class="auto-box">
-          <input class="f-input" id="in-wies" autocomplete="off" placeholder="np. Lasków">
-          <div class="auto-lista" id="auto-wsie"></div>
+      <div class="f-sekcja">
+        <div class="f-sek-nag">📍 Gdzie</div>
+
+        <div class="f-group">
+          <div class="f-label">Obręb / wieś <span class="sub">plik Excel grupuje się po tym polu</span></div>
+          <div class="auto-box">
+            <input class="f-input" id="in-wies" autocomplete="off" placeholder="np. Lasków">
+            <div class="auto-lista" id="auto-wsie"></div>
+          </div>
+        </div>
+
+        <div class="f-group">
+          <div class="f-label">Numer wydzielenia <span class="sub">numer przyjmuje się, gdy przejdziesz do kolejnego pola</span></div>
+          <div class="tag-input">
+            <input class="f-input" id="in-dzialka" inputmode="numeric" placeholder="np. 10" autocomplete="off">
+          </div>
+          <div class="chips" id="dzialki-chips"></div>
         </div>
       </div>
 
+      <div class="f-sekcja">
+        <div class="f-sek-nag">🌲 Drzewostan</div>
 
-      <div class="f-group">
-        <div class="f-label">Numer wydzielenia <span class="sub">numer przyjmuje się, gdy przejdziesz do kolejnego pola</span></div>
-        <div class="tag-input">
-          <input class="f-input" id="in-dzialka" inputmode="numeric" placeholder="np. 10" autocomplete="off">
+        <div class="f-group">
+          <div class="f-label">Siedlisko</div>
+          <div class="chips" data-group="siedlisko"></div>
         </div>
-        <div class="chips" id="dzialki-chips"></div>
-      </div>
 
-      <div class="f-group">
-        <div class="f-label">Siedlisko</div>
-        <div class="chips" data-group="siedlisko"></div>
-      </div>
-
-      <div class="f-group">
-        <div class="f-label">Gatunek panujący</div>
-        <div class="chips" data-group="panujacy"></div>
-        <div class="stepper">
-          <button type="button" data-step="udzialpan" data-dir="-1">−</button>
-          <div class="val" data-edit="udzialpan" title="kliknij, aby wpisać ręcznie"><span id="udzial-pan-linia">10 So</span><small>skład warstwy (dziesiątki)</small></div>
-          <button type="button" data-step="udzialpan" data-dir="1">+</button>
+        <div class="f-group">
+          <div class="f-label">Gatunek panujący</div>
+          <div class="chips" data-group="panujacy"></div>
+          <div class="stepper">
+            <button type="button" data-step="udzialpan" data-dir="-1">−</button>
+            <div class="val" data-edit="udzialpan" title="kliknij, aby wpisać ręcznie"><span id="udzial-pan-linia">10 So</span><small>skład warstwy (dziesiątki)</small></div>
+            <button type="button" data-step="udzialpan" data-dir="1">+</button>
+          </div>
         </div>
-      </div>
 
-      <div class="f-group">
-        <div class="f-label">Drugi gatunek <span class="sub">udział kręcisz obok</span></div>
-        <div class="chips" data-group="drugi"></div>
-        <div class="stepper">
-          <button type="button" data-step="udzial" data-dir="-1">−</button>
-          <div class="val" data-edit="udzial" title="kliknij, aby wpisać ręcznie"><span id="udzial-linia">10 So</span><small>skład warstwy (dziesiątki)</small></div>
-          <button type="button" data-step="udzial" data-dir="1">+</button>
+        <div class="f-group">
+          <div class="f-label">Drugi gatunek <span class="sub">udział kręcisz obok</span></div>
+          <div class="chips" data-group="drugi"></div>
+          <div class="stepper">
+            <button type="button" data-step="udzial" data-dir="-1">−</button>
+            <div class="val" data-edit="udzial" title="kliknij, aby wpisać ręcznie"><span id="udzial-linia">10 So</span><small>skład warstwy (dziesiątki)</small></div>
+            <button type="button" data-step="udzial" data-dir="1">+</button>
+          </div>
         </div>
-      </div>
 
-      <div class="f-group">
-        <div class="f-label">Wiek warstwy głównej <span class="sub">strzałki albo kliknij wiek</span></div>
-        <div class="stepper">
-          <button type="button" data-step="wiek" data-dir="-5">−</button>
-          <div class="val" data-edit="wiek" title="kliknij, aby wpisać ręcznie"><span id="wiek-linia">85–95 / 90 l</span><small id="wiek-klasa">klasa wieku VI</small></div>
-          <button type="button" data-step="wiek" data-dir="5">+</button>
+        <div class="f-group">
+          <div class="f-label">Wiek warstwy głównej <span class="sub">strzałki albo kliknij wiek</span></div>
+          <div class="stepper">
+            <button type="button" data-step="wiek" data-dir="-5">−</button>
+            <div class="val" data-edit="wiek" title="kliknij, aby wpisać ręcznie"><span id="wiek-linia">85–95 / 90 l</span><small id="wiek-klasa">klasa wieku VI</small></div>
+            <button type="button" data-step="wiek" data-dir="5">+</button>
+          </div>
         </div>
-      </div>
 
-      <div class="f-group">
-        <div class="f-label">Przedrostek / drugie piętro <span class="sub">pjd. — wiele gatunków</span></div>
-        <div class="chips" data-group="pjd"></div>
-        <div class="stepper">
-          <button type="button" data-step="pjdwiek" data-dir="-5">−</button>
-          <div class="val" data-edit="pjdwiek" title="kliknij, aby wpisać ręcznie"><span id="pjd-wiek-linia">65–75 / 70 l</span><small>wiek pjd.</small></div>
-          <button type="button" data-step="pjdwiek" data-dir="5">+</button>
+        <div class="f-group">
+          <div class="f-label">Przedrostek / drugie piętro <span class="sub">pjd. — wiele gatunków</span></div>
+          <div class="chips" data-group="pjd"></div>
+          <div class="stepper">
+            <button type="button" data-step="pjdwiek" data-dir="-5">−</button>
+            <div class="val" data-edit="pjdwiek" title="kliknij, aby wpisać ręcznie"><span id="pjd-wiek-linia">65–75 / 70 l</span><small>wiek pjd.</small></div>
+            <button type="button" data-step="pjdwiek" data-dir="5">+</button>
+          </div>
         </div>
-      </div>
 
-      <div class="f-group">
-        <div class="f-label">Zwarcie</div>
-        <div class="chips" data-group="zwarcie"></div>
-      </div>
-
-      <div class="f-group">
-        <div class="f-label">Podszyt <span class="sub">wiele gatunków</span></div>
-        <div class="chips" data-group="podsz"></div>
-        <div class="stepper">
-          <button type="button" data-step="podszproc" data-dir="-10">−</button>
-          <div class="val" data-edit="podszproc" title="kliknij, aby wpisać ręcznie"><span id="podsz-proc">50%</span><small>pokrycia podszytu</small></div>
-          <button type="button" data-step="podszproc" data-dir="10">+</button>
+        <div class="f-group">
+          <div class="f-label">Zwarcie</div>
+          <div class="chips" data-group="zwarcie"></div>
         </div>
       </div>
 
-      <div class="f-group">
-        <div class="f-label">Elementy taksacyjne <span class="sub">opcjonalnie, uzupełnisz jak trzeba</span></div>
-        <div class="f-row3">
-          <input class="f-input" id="e-wys" inputmode="decimal" placeholder="wys. m" autocomplete="off">
-          <input class="f-input" id="e-pier" inputmode="decimal" placeholder="pierś. cm" autocomplete="off">
-          <input class="f-input" id="e-bon" placeholder="bon. (I)" autocomplete="off">
+      <div class="f-sekcja">
+        <div class="f-sek-nag">🌿 Podszyt i detale</div>
+
+        <div class="f-group">
+          <div class="f-label">Podszyt <span class="sub">wiele gatunków</span></div>
+          <div class="chips" data-group="podsz"></div>
+          <div class="stepper">
+            <button type="button" data-step="podszproc" data-dir="-10">−</button>
+            <div class="val" data-edit="podszproc" title="kliknij, aby wpisać ręcznie"><span id="podsz-proc">50%</span><small>pokrycia podszytu</small></div>
+            <button type="button" data-step="podszproc" data-dir="10">+</button>
+          </div>
         </div>
-        <div class="f-row3" style="margin-top:8px">
-          <input class="f-input" id="e-zad" placeholder="zad. (10%)" autocomplete="off">
-          <input class="f-input" id="e-miaz" inputmode="decimal" placeholder="miąż. m³/ha" autocomplete="off">
-          <div class="f-input statyczny" id="e-kl">kl. VI</div>
-        </div>
+
+        <details class="f-details">
+          <summary>Elementy taksacyjne <span class="sub">opcjonalnie</span></summary>
+          <div class="f-wnetrze">
+            <div class="f-row3">
+              <input class="f-input" id="e-wys" inputmode="decimal" placeholder="wys. m" autocomplete="off">
+              <input class="f-input" id="e-pier" inputmode="decimal" placeholder="pierś. cm" autocomplete="off">
+              <input class="f-input" id="e-bon" placeholder="bon. (I)" autocomplete="off">
+            </div>
+            <div class="f-row3" style="margin-top:8px">
+              <input class="f-input" id="e-zad" placeholder="zad. (10%)" autocomplete="off">
+              <input class="f-input" id="e-miaz" inputmode="decimal" placeholder="miąż. m³/ha" autocomplete="off">
+              <div class="f-input statyczny" id="e-kl">kl. VI</div>
+            </div>
+          </div>
+        </details>
+
+        <details class="f-details">
+          <summary>Wskazania <span class="sub">opcjonalnie</span></summary>
+          <div class="f-wnetrze">
+            <div class="f-row3">
+              <input class="f-input" id="w-typ" placeholder="TP-40" autocomplete="off">
+              <input class="f-input" id="w-pow" inputmode="decimal" placeholder="pow. ha" autocomplete="off">
+              <input class="f-input" id="w-miaz" inputmode="decimal" placeholder="miąż. m³" autocomplete="off">
+            </div>
+          </div>
+        </details>
       </div>
 
-      <div class="f-group">
-        <div class="f-label">Wskazania <span class="sub">opcjonalnie</span></div>
-        <div class="f-row3">
-          <input class="f-input" id="w-typ" placeholder="TP-40" autocomplete="off">
-          <input class="f-input" id="w-pow" inputmode="decimal" placeholder="pow. ha" autocomplete="off">
-          <input class="f-input" id="w-miaz" inputmode="decimal" placeholder="miąż. m³" autocomplete="off">
-        </div>
-      </div>
-
-      <div class="f-group">
-        <div class="f-label">Lokalizacja</div>
+      <div class="f-sekcja">
+        <div class="f-sek-nag">📌 Lokalizacja</div>
         <div class="loc">
           <button type="button" class="loc-btn" id="btn-gps">📡 Tu stoję (GPS)</button>
           <button type="button" class="loc-btn" id="btn-mapa">📍 Pinezka na mapie</button>
@@ -161,8 +176,16 @@
         <div class="loc-info" id="loc-info">brak lokalizacji</div>
       </div>
 
-      <button class="fab" id="btn-zapisz">✓ Zapisz opis</button>
+      <div class="f-dolek"></div>
+    </div>
 
+    <div class="zapis-pasek" id="zapis-pasek">
+      <div class="zp-info">
+        <div class="zp-postep" id="zp-postep" title="uzupełnione pola obowiązkowe"></div>
+        <div class="zp-suma" id="zp-suma">— wybierz wieś</div>
+        <div class="zp-suma-sub" id="zp-suma-sub">—</div>
+      </div>
+      <button class="fab zp-btn" id="btn-zapisz">✓ Zapisz</button>
     </div>
   </div>
 

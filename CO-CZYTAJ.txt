@@ -1,25 +1,32 @@
-FORESTLY GO — v1.0.45: naprawa rejestracji wtyczek (folder + aktualizacje)
-=========================================================================
+FORESTLY GO — v1.0.46: odświeżona zakładka „Nowy opis”
+======================================================
 
-CO BYŁO NIE TAK (dowód z raportu diagnostycznego v1.0.44)
-  Mostek Capacitora działał, ale w liście wtyczek brakowało naszych
-  dwóch: „Pliki” i „Aktualizacje” (były tylko te z paczek npm).
-  Powód: MainActivity rejestrował wtyczki PO super.onCreate(), a
-  mostek Capacitora buduje się właśnie W ŚRODKU super.onCreate —
-  rejestracja po tym momencie trafiała w próżnię.
+CO NOWEGO
+  1. KARTY-SEKCJE — formularz nie jest już jedną długą kolumną:
+     📍 Gdzie (obręb/wieś + numery wydzieleń)
+     🌲 Drzewostan (siedlisko, gatunki, wiek, pjd, zwarcie)
+     🌿 Podszyt i detale (podszyt + zwijane: elementy taksacyjne,
+        wskazania)
+     📌 Lokalizacja (GPS / mapa)
 
-CO SIĘ ZMIENIŁO
-  W MainActivity.java wywołania registerPlugin(...) przeniesione
-  PRZED super.onCreate(). Tym razem wtyczki faktycznie wchodzą
-  do mostka i strona je widzi.
+  2. PŁYWAJĄCY PASEK ZAPISU — zawsze widoczny na dole ekranu:
+     - 4 kreski postępu pól obowiązkowych (wieś, numer, siedlisko,
+       gatunek panujący) — świecą się na zielono w miarę wypełniania,
+     - podsumowanie na żywo: „Lasków · 10, 12” oraz „Lw · So + Md”,
+     - przycisk „✓ Zapisz” zawsze pod ręką, bez szurania na dół.
 
-CO SPRAWDZIĆ PO INSTALACJI (wymagane wydanie APK!)
-  1. Sync → Urządzenie → „Diagnostyka”: na liście wtyczek muszą
-     pojawić się „Pliki” i „Aktualizacje”.
-  2. „Wybierz folder”: otwiera systemowy wybór folderu Androida.
-  3. „Sprawdź aktualizacje” (przy nowszej wersji na GitHubie):
-     pasek postępu pobierania w aplikacji → systemowe „Zainstaluj”.
+  3. ZWIJANE DETALE — „Elementy taksacyjne” i „Wskazania” (rzadko
+     używane) są schowane pod „rozwiń ▾” — formularz jest krótszy.
+
+  4. DROBNICE — większe chipy z wyraźnym zaznaczeniem gradientem,
+     większe przyciski +/- przy wiekach i udziałach, teksty pomocnicze
+     pod etykietami (koniec ucinanych napisów).
+
+INSTALACJA
+  Zmiany tylko w plikach WWW — PWA podmieni się sama; przy APK
+  wystarczy wydać wersję (release.bat) i zainstalować aktualizację
+  (teraz już z poziomu aplikacji, z paskiem postępu).
 
 ZMIENIONE PLIKI
-  android/app/src/main/java/com/wskakuj/forestlygo/MainActivity.java,
-  js/wersja.js, sw.js, RELEASE_NOTES.md, CO-CZYTAJ.txt
+  index.html, css/app.css, js/app.js, js/wersja.js, sw.js,
+  RELEASE_NOTES.md, CO-CZYTAJ.txt

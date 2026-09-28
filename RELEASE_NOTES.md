@@ -1,6 +1,6 @@
-# v1.0.45
+# v1.0.46
 
-fix
+nowe opisy karta
 
 ---
 *wydane z telefonu — ForestlyGO Release*
