@@ -1032,7 +1032,12 @@ $("#btn-pc-zaloguj").addEventListener("click", async () => {
       ", folder: " + ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
     rysujSync(); resetujStatusPolaczenia();
   } catch (e) {
-    toast(String(e.message || e));
+    toast(String(e.message || e), e.potrzebujeKodu ? 9000 : undefined);
+    /* pCloud pyta o kod weryfikacyjny — nasuwamy pole i podświetlamy */
+    if (e.potrzebujeKodu) {
+      const pole = $("#pc-kod");
+      if (pole) { pole.focus(); pole.style.borderColor = "var(--orange)"; }
+    }
     /* szczegóły (po jakim serwerze, jaki kod błędu) — do logu Sync,
        żeby przy następnym podejściu wiedzieć dokładnie co się stało */
     CLOUDS.log("pCloud <b>logowanie nie wyszło</b>: " + (e.message || e) +
