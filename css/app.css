@@ -26,10 +26,28 @@ button { font-family: var(--font-body); }
 .appbar { padding: 14px 16px 12px; display: flex; align-items: center; gap: 10px; flex: none;
   padding-top: calc(14px + env(safe-area-inset-top));
   background: rgba(16, 21, 29, .92); border-bottom: 1px solid var(--line); color: var(--ink); }
-.appbar .ab-title { flex: 1; min-width: 0; }
-.appbar .ab-title b { display: block; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
-.appbar .ab-title small { display: block; font-size: 11px; opacity: .8; font-family: var(--font-mono);
+.appbar .ab-title { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+/* logo jak w Forestly PC: kafla z gradientem i poświatą */
+.ab-logo { width: 34px; height: 34px; border-radius: 10px; flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 17px;
+  background: var(--grad); box-shadow: 0 6px 18px rgba(45, 212, 167, .35); }
+.ab-txt { min-width: 0; }
+.ab-nazwa { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* nazwa jak w Forestly PC: gradient na tekście */
+.appbar .ab-title b { display: block; font-size: 16px; font-weight: 700; letter-spacing: .2px;
+  font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+/* wersja programu obok nazwy — pigułka jak w Forestly PC */
+.ab-wersja { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: .6px;
+  color: var(--dim); border: 1px solid var(--line2); border-radius: 999px;
+  padding: 1px 8px; white-space: nowrap; flex: none; }
+.appbar .ab-title small { display: block; font-size: 11px; font-family: var(--font-mono);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* status połączenia z chmurami: online / lokalnie */
+.st-on { color: var(--accent); font-weight: 700; }
+.st-off { color: #ff6b6f; font-weight: 700; text-decoration: line-through; }
+.st-lok { color: var(--accent2); font-weight: 700; }
 .obreb { font-family: var(--font-mono); font-size: 11px; background: rgba(45, 212, 167, .14);
   border: 1px solid rgba(45, 212, 167, .35); color: var(--accent); border-radius: 999px;
   padding: 5px 10px; white-space: nowrap; cursor: pointer; user-select: none; }

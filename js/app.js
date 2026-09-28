@@ -103,7 +103,12 @@ async function wybierzFolder() {
     const r = await Capacitor.Plugins.Pliki.wybierzFolder();
     return { uri: r.uri, nazwa: r.nazwa, natywny: true };
   }
-  return await pokazDialogFolderu();
+  if (window.showDirectoryPicker) return await pokazDialogFolderu();
+  /* telefon w przeglądarce (PWA): system nie pozwala wskazać folderu —
+     tłumaczymy zamiast rzucać błędem */
+  toast("Wybór folderu działa w aplikacji natywnej (APK ForestlyGO) i na komputerze " +
+        "w Chrome/Edge. Tutaj pliki Excel i tak pobierzesz przyciskiem — folder nie jest potrzebny.", 6000);
+  throw new Error("brak wsparcia folderów w tej przeglądarce");
 }
 
 function renderOnb() {
@@ -212,11 +217,67 @@ async function pokazDialogFolderu() {
   throw new Error("brak File System Access API");
 }
 
+/* ---------- status połączenia z chmurami (online / lokalnie) ---------- */
+let STATUS_POLACZENIA = null;      /* null = sprawdzanie w toku */
+let __probeWLocie = false;
+function htmlStatusu() {
+  if (STATUS_POLACZENIA === null)
+    return '<span class="st-off" style="text-decoration:none">sprawdzam…</span>';
+  if (STATUS_POLACZENIA)
+    return '<span class="st-on">online</span>';
+  return '<span class="st-off">online</span> <span class="st-lok">lokalnie</span>';
+}
+function probeAdresu(url) {
+  /* zapytanie bez CORS: odpowiedź sieciowa = serwer żyje, nawet bez nagłówków CORS */
+  return new Promise(wynik => {
+    const t = setTimeout(() => wynik(false), 6000);
+    fetch(url, { mode: "no-cors", cache: "no-store" })
+      .then(() => { clearTimeout(t); wynik(true); })
+      .catch(() => { clearTimeout(t); wynik(false); });
+  });
+}
+async function sprawdzPolaczenie() {
+  if (__probeWLocie) return;
+  __probeWLocie = true;
+  try {
+    const ncC = await DB.metaGet("nextcloud") || {};
+    const pcC = await DB.metaGet("pcloud") || {};
+    const gdC = await DB.metaGet("gdrive") || {};
+    const cele = [];
+    if (ncC.url && ncC.pass) cele.push(String(ncC.url));
+    if (pcC.token) cele.push("https://" + (pcC.host || "api.pcloud.com"));
+    if (gdC.refreshToken) cele.push("https://www.googleapis.com");
+    if (!cele.length || !navigator.onLine) {
+      STATUS_POLACZENIA = false;
+    } else {
+      STATUS_POLACZENIA = (await Promise.all(cele.map(probeAdresu))).some(Boolean);
+    }
+  } catch (e) { STATUS_POLACZENIA = false; }
+  __probeWLocie = false;
+  const sub = $("#ab-sub");
+  if (sub) sub.innerHTML = htmlStatusu();
+}
+function resetujStatusPolaczenia() {
+  STATUS_POLACZENIA = null;
+  const sub = $("#ab-sub");
+  if (sub) sub.innerHTML = htmlStatusu();
+  sprawdzPolaczenie();
+}
+window.addEventListener("online", resetujStatusPolaczenia);
+window.addEventListener("offline", () => {
+  STATUS_POLACZENIA = false;
+  const sub = $("#ab-sub");
+  if (sub) sub.innerHTML = htmlStatusu();
+});
+
 /* ---------- pasek górny ---------- */
 async function odswiezAppbar() {
   const autor = await DB.metaGet("autor");
   const sub = $("#ab-sub"), chip = $("#ab-user"), k = $("#ab-kolejka");
-  sub.textContent = stan.wies ? stan.wies + " · app działa offline" : "app działa offline";
+  sub.innerHTML = htmlStatusu();
+  const wAb = $("#ab-wersja");
+  if (wAb) wAb.textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?");
+  if (STATUS_POLACZENIA === null) sprawdzPolaczenie();
   chip.style.display = autor ? "flex" : "none";
   chip.textContent = autor ? autor.split(" ").map(x => x[0]).slice(0, 2).join("").toUpperCase() : "?";
   const kol = await CLOUDS.kolejkaInfo();
@@ -762,7 +823,7 @@ async function rysujSync() {
   const dir = await DB.metaGet("folder");
   $("#s-folder").textContent = dir ? (dir.nazwa || dir.name) : "nie wybrano";
   $("#btn-folder").textContent = dir ? "Zmień folder" : "Wybierz folder";
-  $("#btn-folder").style.display = (FOLDER_MOZLIWY || FOLDER_NATYWNY) ? "" : "none";
+  $("#btn-folder").style.display = "";   /* zawsze widoczny — klik sam wyjaśnia ograniczenia */
   $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?");
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
@@ -790,7 +851,10 @@ async function wczytajKonfigChmur() {
   $("#nc-pass").value = nc.pass || "";
   $("#nc-path").value = (nc.sciezka && nc.sciezka !== "Taksator") ? nc.sciezka : "Dysk QNAP WD/FORESTLY BAZA";
   const pc = await DB.metaGet("pcloud") || {};
-  $("#pc-token").value = pc.token || ""; $("#pc-path").value = pc.path || "/Taksator";
+  /* #pc-token nie istnieje od porządków w Sync (v1.0.20) — ten zapis
+     wywalał całe wczytywanie konfiguracji chmur przy starcie */
+  const pcToken = $("#pc-token"); if (pcToken) pcToken.value = pc.token || "";
+  $("#pc-path").value = pc.path || "/Taksator";
   const gd = await DB.metaGet("gdrive") || {};
   $("#gd-folder").value = gd.folder || "FORESTLY GO";
 }
@@ -828,7 +892,7 @@ $("#btn-nc-save").addEventListener("click", async () => {
     pass: $("#nc-pass").value, sciezka: $("#nc-path").value.trim() });
   toast("Nextcloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Nextcloud" +
     ($("#nc-path").value.trim() ? " — folder: " + $("#nc-path").value.trim() : ""));
-  rysujSync();
+  rysujSync(); resetujStatusPolaczenia();
 });
 $("#btn-pc-zaloguj").addEventListener("click", async () => {
   try {
@@ -841,7 +905,7 @@ $("#btn-pc-zaloguj").addEventListener("click", async () => {
     toast("Zalogowano do pCloud ✓ (" + r.email + ")");
     CLOUDS.log("<b>zalogowano</b> do pCloud — " + r.email +
       ", folder: " + ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
-    rysujSync();
+    rysujSync(); resetujStatusPolaczenia();
   } catch (e) { toast(String(e.message || e)); }
 });
 $("#btn-pc-save").addEventListener("click", async () => {
@@ -851,7 +915,7 @@ $("#btn-pc-save").addEventListener("click", async () => {
     path: $("#pc-path").value.trim() || "/FORESTLY BAZA" });
   toast("Folder zapisany"); CLOUDS.log("<b>zapisano</b> folder pCloud: " +
     ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
-  rysujSync();
+  rysujSync(); resetujStatusPolaczenia();
 });
 /* Dysk Google: logowanie kontem użytkownika (OAuth + PKCE) */
 /* Identyfikator klienta aplikacji ForestlyGO w Google Cloud — wpisany na stałe,
@@ -887,7 +951,7 @@ async function gdPolaczKod(kod) {
     const r = await CLOUDS.gdriveDolaczKod(kod);
     await DB.metaSet("gdrive", { clientId: r.clientId, refreshToken: r.refreshToken,
       folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
-    rysujSync();   // ptaszek na zielono od razu
+    rysujSync(); resetujStatusPolaczenia();   // ptaszek na zielono od razu
     toast("Połączono z Dyskiem Google ✓");
     CLOUDS.log("<b>Dysk Google</b> — zalogowano kontem Google");
     /* od razu sprawdzamy, czy wszystko działa — user widzi efekt bez klikania */
@@ -907,7 +971,7 @@ $("#btn-gd-save").addEventListener("click", async () => {
     refreshToken: stary.refreshToken, folder: $("#gd-folder").value.trim() || "FORESTLY GO" });
   toast("Dysk Google zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Dysku Google — folder: " +
     ($("#gd-folder").value.trim() || "FORESTLY GO"));
-  rysujSync();
+  rysujSync(); resetujStatusPolaczenia();
 });
 $("#btn-nc-test").addEventListener("click", async () => {
   const cfg = { url: $("#nc-url").value.trim(), user: $("#nc-user").value.trim(), pass: $("#nc-pass").value };

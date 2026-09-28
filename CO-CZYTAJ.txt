@@ -1,20 +1,37 @@
-FORESTLY GO — v1.0.20: porządki w Sync, pola wsi na mapie
-=========================================================
+FORESTLY GO — v1.0.40: nowy nagłówek, status ONLINE/LOKALNIE, przycisk folderu
+=============================================================================
 
-CO NOWEGO
-  1. BACKUP SESJI — dwa przyciski zamiast trzech. "Wczytaj z pliku"
-     zniknęło; "Przywróć backup" jest jeden i sam się dostosowuje:
-     na komputerze wskazujesz folder, na telefonie od razu plik
-     backupu (Android nie umie folderów). "Pobierz backup (plik)"
-     i "Zapisz teraz" bez zmian.
-  2. CHMURY — karta w Sync pokazuje teraz tylko status
-     (Nextcloud ✓/— · pCloud ✓/— · Dysk Google ✓/—) i przycisk
-     "☁ Ustawienia chmur", który otwiera OSOBNE OKNO z zakładkami
-     trzech chmur. Zamykanie: ✕ albo dotknięcie tła.
-  3. MAPA — każda wieś ma swoje zielone pole: okrąg obejmujący
-     wszystkie pinezki tej wsi, z nazwą wsi na środku. Wieś
-     z jedną pinezką dostaje małe pole, żeby nazwa była widoczna.
+1. NAGŁÓWEK JAK W FORESTLY PC
+   - zielona kafla z logo (drzewko) z poświatą,
+   - „Forestly GO” z gradientem jak na komputerze,
+   - obok nazwy pigułka z wersją programu (v1.0.40).
+
+2. STATUS POŁĄCZENIA ZAMIAST „app działa offline”
+   Przy każdym uruchomieniu (i po zmianie sieci lub zapisie chmur)
+   aplikacja sprawdza połączenie z chmurami:
+   - jest połączenie z którąś chmurą  -> zielone „online”,
+   - brak połączenia                  -> czerwone przekreślone „online”
+                                        i obok niebieskie „lokalnie”.
+
+3. PRZYCISK FOLDERU W SYNC („Pliki do wysłania”)
+   „Wybierz folder” jest teraz zawsze widoczny:
+   - w aplikacji natywnej (APK) otwiera systemowy wybór folderu,
+   - w przeglądarce (PWA na telefonie) tłumaczy, że tam system
+     nie pozwala wskazać folderu — Excel pobierasz przyciskiem,
+   - na komputerze (Chrome/Edge) — pełny wybór folderu.
+   (W wersji przeglądarkowej na telefonie przycisku wcześniej
+   nie było wcale — stąd „nie wybrano”.)
+
+4. NAPRAWA
+   Przy starcie padało wczytywanie zapisanych ustawień chmur
+   (brakujące pole #pc-token po porządkach w Sync) — naprawione.
 
 INSTALACJA
-  Rozpakuj do repo forestly-go ("Zamień pliki w folderze docelowym")
-  i wydaj wersję (release.bat / ForestlyGO Release).
+  - PWA (ikona ze strony): odświeży się sama po chwili.
+  - APK: rozpakuj do repo forestly-go, zbuduj i wydaj wersję
+    (release.bat / ForestlyGO Release) — zmiany są w plikach WWW,
+    strona natywna (android/) bez zmian.
+
+ZMIENIONE PLIKI
+  index.html, css/app.css, js/app.js, js/wersja.js, sw.js,
+  RELEASE_NOTES.md, CO-CZYTAJ.txt
