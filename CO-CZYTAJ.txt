@@ -1,37 +1,36 @@
-FORESTLY GO — v1.0.40: nowy nagłówek, status ONLINE/LOKALNIE, przycisk folderu
-=============================================================================
+FORESTLY GO — v1.0.41: aktualizacje w aplikacji, bez wyrzucania do przeglądarki
+===============================================================================
 
-1. NAGŁÓWEK JAK W FORESTLY PC
-   - zielona kafla z logo (drzewko) z poświatą,
-   - „Forestly GO” z gradientem jak na komputerze,
-   - obok nazwy pigułka z wersją programu (v1.0.40).
+1. AKTUALIZACJA W APLIKACJI (najważniejsze)
+   Dotąd pobieranie APK w aplikacji padało: WebView nie może pobierać
+   plików z GitHuba (brak nagłówków CORS) i w efekcie wyrzucało
+   do przeglądarki. Teraz pobiera KOD NATYWNY wtyczki Aktualizacje:
+   - w aplikacji pojawia się okno z paskiem postępu i licznikiem MB,
+   - po pobraniu SAM otwiera się systemowy instalator — klikasz
+     „Zainstaluj” (przy pierwszej aktualizacji raz jeszcze zgoda
+     „Zezwalaj z tego źródła”),
+   - aplikacja się restartuje na nową wersję. Bez przeglądarki,
+     bez szukania pliku w Pobranych.
+   Uwaga: to wymaga nowego APK — ostatni raz trzeba pobrać i zainstalować
+   go ręcznie (z release'u v1.0.41). Kolejne aktualizacje już w aplikacji.
 
-2. STATUS POŁĄCZENIA ZAMIAST „app działa offline”
-   Przy każdym uruchomieniu (i po zmianie sieci lub zapisie chmur)
-   aplikacja sprawdza połączenie z chmurami:
-   - jest połączenie z którąś chmurą  -> zielone „online”,
-   - brak połączenia                  -> czerwone przekreślone „online”
-                                        i obok niebieskie „lokalnie”.
+2. PRZYCISK „WYBIERZ FOLDER” W SYNC
+   - w przeglądarce (PWA) na telefonie: system nie pozwala wskazać
+     folderu — przycisk pokazuje teraz jasne wyjaśnienie zamiast
+     błędu „nie udało się”,
+   - w APK: gdyby coś jeszcze nie działało, komunikat podaje POWÓD
+     (np. „anulowano”) — proszę go zgłosić.
 
-3. PRZYCISK FOLDERU W SYNC („Pliki do wysłania”)
-   „Wybierz folder” jest teraz zawsze widoczny:
-   - w aplikacji natywnej (APK) otwiera systemowy wybór folderu,
-   - w przeglądarce (PWA na telefonie) tłumaczy, że tam system
-     nie pozwala wskazać folderu — Excel pobierasz przyciskiem,
-   - na komputerze (Chrome/Edge) — pełny wybór folderu.
-   (W wersji przeglądarkowej na telefonie przycisku wcześniej
-   nie było wcale — stąd „nie wybrano”.)
-
-4. NAPRAWA
-   Przy starcie padało wczytywanie zapisanych ustawień chmur
-   (brakujące pole #pc-token po porządkach w Sync) — naprawione.
+3. KARTA „URZĄDZENIE” W SYNC
+   Nowy wiersz „Tryb” pokazuje, gdzie działa aplikacja:
+   „APK (natywna)” czy „przeglądarka / PWA” — ułatwia diagnozę.
 
 INSTALACJA
-  - PWA (ikona ze strony): odświeży się sama po chwili.
-  - APK: rozpakuj do repo forestly-go, zbuduj i wydaj wersję
-    (release.bat / ForestlyGO Release) — zmiany są w plikach WWW,
-    strona natywna (android/) bez zmian.
+  Rozpakuj do repo forestly-go i wydaj wersję (release.bat /
+  ForestlyGO Release) — zmiany w plikach WWW i w
+  android/.../AktualizacjePlugin.java (nowa metoda pobierz).
 
 ZMIENIONE PLIKI
-  index.html, css/app.css, js/app.js, js/wersja.js, sw.js,
+  index.html, js/app.js, js/pliki.js, js/wersja.js, sw.js,
+  android/app/src/main/java/com/wskakuj/forestlygo/AktualizacjePlugin.java,
   RELEASE_NOTES.md, CO-CZYTAJ.txt

@@ -108,7 +108,7 @@ async function wybierzFolder() {
      tłumaczymy zamiast rzucać błędem */
   toast("Wybór folderu działa w aplikacji natywnej (APK ForestlyGO) i na komputerze " +
         "w Chrome/Edge. Tutaj pliki Excel i tak pobierzesz przyciskiem — folder nie jest potrzebny.", 6000);
-  throw new Error("brak wsparcia folderów w tej przeglądarce");
+  return null;
 }
 
 function renderOnb() {
@@ -825,6 +825,8 @@ async function rysujSync() {
   $("#btn-folder").textContent = dir ? "Zmień folder" : "Wybierz folder";
   $("#btn-folder").style.display = "";   /* zawsze widoczny — klik sam wyjaśnia ograniczenia */
   $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?");
+  const sTryb = $("#s-tryb");
+  if (sTryb) sTryb.textContent = NATYWNIE ? "APK (natywna)" : "przeglądarka / PWA";
   const wsie = await DB.wpisyWsie();
   const wszystkie = await DB.wpisyAll();
   odswiezBackupKarte();
@@ -882,10 +884,15 @@ document.addEventListener("click", async e => {
 $("#btn-folder").addEventListener("click", async () => {
   try {
     const dir = await wybierzFolder();
+    if (!dir) return;   /* PWA na telefonie — komunikat już pokazany wyżej */
     await DB.metaSet("folder", dir);
     toast("Folder zapisany: " + (dir.nazwa || dir.name));
     rysujSync();
-  } catch (e) { toast("Nie udało się wybrać folderu"); }
+  } catch (e) {
+    /* w APK podajemy powód, żeby wiedzieć co naprawić */
+    toast("Nie udało się wybrać folderu" +
+      (e && e.message ? " (" + String(e.message).slice(0, 80) + ")" : ""));
+  }
 });
 $("#btn-nc-save").addEventListener("click", async () => {
   await DB.metaSet("nextcloud", { url: $("#nc-url").value.trim(), user: $("#nc-user").value.trim(),
