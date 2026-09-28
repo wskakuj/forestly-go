@@ -1,34 +1,23 @@
-FORESTLY GO — v1.0.43: jak znaleźć właściwą aplikację na telefonie
-==================================================================
+FORESTLY GO — v1.0.44: diagnostyka jednym przyciskiem
+====================================================
 
-WAŻNE — DWIE IKONY „FORESTLY GO” NA TELEFONIE
-  Na telefonie mogą być DWIE ikony o tej samej nazwie:
-  1. skrót strony (PWA) — dodany przez Chrome / stara TWA — działa
-     w przeglądarce: BEZ wyboru folderu, aktualizacje przez
-     przeglądarkę;
-  2. APLIKACJA NATYWNA (APK) — zainstalowana z pliku ForestlyGO.apk —
-     tylko w niej działa wybór folderu (systemowy) i aktualizacja
-     z paskiem postępu w aplikacji.
+U usera folder i aktualizacja w aplikacji nadal nie działają, mimo że
+APK jest zbudowany poprawnie (sprawdzone: v1.0.43, nowa nazwa ikony,
+wtyczki w miejscu). Żeby rozstrzygnąć, GDZIE dokładnie działa strona:
 
-  Od tej wersji aplikacja natywna nazywa się na liście ikon
-  „ForestlyGO (APK)” — otwieraj TYLKO tę ikonę.
-  Skrótu strony nie trzeba kasować, ale jeśli przeszkadza —
-  przytrzymaj ikonę i usuń.
+1. Wydaj tę wersję i zainstaluj APK (ikona „ForestlyGO (APK)”).
+2. Otwórz aplikację → zakładka Sync → karta Urządzenie.
+3. Dotknij „📋 Diagnostyka — skopiuj raport” → „Kopiuj”.
+4. Wklej raport w wiadomości i wyślij — z niego od razu będzie
+   widać: czy działa mostek Capacitora, jakie wtyczki się wstrzyknęły,
+   z jakiego adresu strona została otwarta i jaka to przeglądarka.
 
-  Samouczek: w zakładce Sync, karta Urządzenie, wiersz „Tryb” pokazuje,
-  gdzie działasz: „APK (natywna)” czy „przeglądarka / PWA”.
-  W przeglądarce na telefonie pojawia się tam podpowiedź.
-
-ZMIANY TECHNICZNE
-  - wykrywanie mostka Capacitora na żywo (przy każdym kliknięciu),
-  - rejestracja service workera z 1,5 s opóźnieniem i ponownym testem
-    (na wypadek późnego wstrzyknięcia mostka w APK).
-
-INSTALACJA
-  Zmiany w plikach WWW i android/.../values/strings.xml (nazwa ikony) —
-  wymagane wydanie APK (release.bat / ForestlyGO Release).
+Wiersz „Tryb” pokazuje teraz trzy możliwości:
+  - „APK (natywna)” — wszystko powinno działać,
+  - „przeglądarka / PWA” — otwarty skrót strony,
+  - „APK — brak mostka!” — aplikacja natywna, ale mostek nie
+    odpowiedział (wtedy właśnie potrzebny raport z diagnostyki).
 
 ZMIENIONE PLIKI
-  index.html bez zmian; js/app.js, js/pliki.js, js/wersja.js, sw.js,
-  android/app/src/main/res/values/strings.xml,
+  index.html, js/app.js, js/wersja.js, sw.js,
   RELEASE_NOTES.md, CO-CZYTAJ.txt

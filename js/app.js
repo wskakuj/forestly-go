@@ -851,7 +851,14 @@ async function rysujSync() {
   $("#s-wersja").textContent = (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?");
   const sTryb = $("#s-tryb");
   if (sTryb) {
-    sTryb.textContent = czyNatywnie() ? "APK (natywna)" : "przeglądarka / PWA";
+    /* APK serwuje stronę z korzenia (np. /index.html); strona w przeglądarce
+       zawsze ma w ścieżce /forestly-go/ — po tym rozpoznajemy kontekst
+       nawet wtedy, gdy mostek nie odpowiedział */
+    const naStronie = location.pathname.indexOf("/forestly-go") === 0;
+    const trybTekst = czyNatywnie()
+      ? "APK (natywna)"
+      : (naStronie ? "przeglądarka / PWA" : "APK — brak mostka!");
+    sTryb.textContent = trybTekst;
     let nota = document.getElementById("s-tryb-nota");
     if (!czyNatywnie() && MOBILNY) {
       if (!nota) {
@@ -860,9 +867,12 @@ async function rysujSync() {
         nota.className = "s-notka";
         sTryb.parentElement.insertBefore(nota, sTryb.nextSibling);
       }
-      nota.textContent = "Ten skrót strony działa w przeglądarce — dlatego folderu nie da się wskazać. " +
-        "Zamknij i otwórz ikonę „ForestlyGO (APK)” z listy aplikacji: to zainstalowana aplikacja, " +
-        "w niej wybór folderu i aktualizacje działają w aplikacji.";
+      nota.textContent = naStronie
+        ? "Ten skrót strony działa w przeglądarce — dlatego folderu nie da się wskazać. " +
+          "Zamknij i otwórz ikonę „ForestlyGO (APK)” z listy aplikacji: to zainstalowana aplikacja, " +
+          "w niej wybór folderu i aktualizacje działają w aplikacji."
+        : "Wygląda na to, że działa aplikacja natywna, ale jej mostek nie odpowiedział. " +
+          "Dotknij „Diagnostyka — skopiuj raport” poniżej i wyślij mi ten raport — naprawię to.";
     } else if (nota) nota.remove();
   }
   const wsie = await DB.wpisyWsie();
@@ -1199,6 +1209,81 @@ function bindAutoWsie() {
   });
 }
 bindAutoWsie();
+
+/* ---------- diagnostyka (Sync → Urządzenie) ---------- */
+async function raportDiagnostyczny() {
+  const naStronie = location.pathname.indexOf("/forestly-go") === 0;
+  let mostek = "brak", isNat = "—", wtyczki = "brak", naglowki = "brak";
+  try {
+    if (window.Capacitor) {
+      mostek = "jest";
+      isNat = window.Capacitor.isNativePlatform ? String(window.Capacitor.isNativePlatform()) : "?";
+      const w = Object.keys(window.Capacitor.Plugins || {});
+      wtyczki = w.length ? w.join(", ") : "brak";
+      const nh = window.Capacitor.PluginHeaders;
+      naglowki = Array.isArray(nh) ? nh.map(x => x && (x.name || x.id || "?")).join(", ") : "brak";
+    }
+  } catch (e) { mostek = "błąd: " + e.message; }
+  let sw = "brak";
+  try {
+    if (navigator.serviceWorker) sw = navigator.serviceWorker.controller
+      ? "kontroluje stronę (scope: " + navigator.serviceWorker.controller.scriptURL + ")"
+      : "zarejestrowany, nie kontroluje";
+  } catch (e) {}
+  return [
+    "RAPORT FORESTLYGO " + (typeof WERSJA_APLIKACJI !== "undefined" ? WERSJA_APLIKACJI : "?"),
+    "tryb: " + (czyNatywnie() ? "APK (natywna)" : (naStronie ? "przeglądarka / PWA" : "APK — brak mostka!")),
+    "mostek Capacitor: " + mostek + (mostek === "jest" ? " (isNativePlatform: " + isNat + ")" : ""),
+    "wtyczki: " + wtyczki,
+    "nagłówki wtyczek: " + naglowki,
+    "showDirectoryPicker: " + (window.showDirectoryPicker ? "dostępne" : "brak"),
+    "adres strony: " + location.href,
+    "service worker: " + sw,
+    "tryb standalone: " + (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches ? "tak" : "nie"),
+    "przeglądarka: " + navigator.userAgent,
+    "data: " + new Date().toISOString()
+  ].join("\n");
+}
+async function kopiujDoSchowka(tekst) {
+  try { await navigator.clipboard.writeText(tekst); return true; } catch (e) {}
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = tekst;
+    ta.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch (e) { return false; }
+}
+async function pokazDiagnostyke() {
+  const raport = await raportDiagnostyczny();
+  const nak = document.createElement("div");
+  nak.id = "diag-nakladka";
+  nak.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);" +
+    "display:flex;align-items:center;justify-content:center;padding:16px";
+  const box = document.createElement("div");
+  box.style.cssText = "background:#141a22;border:1px solid rgba(45,212,167,.45);border-radius:14px;" +
+    "padding:18px;width:min(92vw,420px);font:12px var(--font-mono,monospace);color:#eef2f6";
+  box.innerHTML = '<b style="font-size:14px">Diagnostyka</b>' +
+    '<textarea readonly style="width:100%;height:260px;margin-top:10px;background:#0b0f14;color:#eef2f6;' +
+    'border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:8px;font:11px monospace"></textarea>' +
+    '<div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">' +
+    '<button type="button" class="fab" id="diag-kopiuj">Kopiuj</button>' +
+    '<button type="button" class="fab szary" id="diag-zamknij">Zamknij</button></div>';
+  const pole = box.querySelector("textarea");
+  pole.value = raport;
+  nak.appendChild(box);
+  document.body.appendChild(nak);
+  box.querySelector("#diag-zamknij").onclick = () => nak.remove();
+  box.querySelector("#diag-kopiuj").onclick = async () => {
+    pole.focus(); pole.select();
+    const ok = await kopiujDoSchowka(raport);
+    toast(ok ? "Skopiowano ✓ — wklej w wiadomości do mnie" : "Zaznacz tekst i skopiuj ręcznie", 5000);
+  };
+}
+$("#btn-diag").addEventListener("click", pokazDiagnostyke);
 
 /* ---------- sprawdzanie aktualizacji (ręczny przycisk w Sync) ---------- */
 async function sprawdzAktualizacjeRecznie() {
