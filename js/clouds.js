@@ -202,14 +202,32 @@ const CLOUDS = (() => {
     throw blad;
   }
   async function pcloudUpload(cfg, nazwa, blob) {
+    const host = cfg.host || "api.pcloud.com";
     const sciezka = cfg.path || "/Taksator";
     const autor = await sciezkaAutor();
-    const url = "https://" + (cfg.host || "api.pcloud.com") + "/uploadfile?auth=" + encodeURIComponent(cfg.token) +
-      "&path=" + encodeURIComponent(ukosnik(sciezka) + autor) + "&filename=" + encodeURIComponent(nazwa) +
-      "&nopartial=1";
+    /* uploadfile wymaga, żeby katalog docelowy ISTNIAŁ (inaczej błąd 2005
+       "Directory does not exist") — a pliki lądują w podfolderze autora.
+       Tworzymy więc każdą gałąź po kolei: createfolderifnotexists tworzy
+       tylko jeden poziom (bez rodziców), więc idziemy od korzenia. */
+    const czesci = (sciezka + "/" + autor).split("/").filter(Boolean);
+    let folderid = 0, sciezkaDotad = "";
+    for (const czesc of czesci) {
+      sciezkaDotad += "/" + czesc;
+      const r = await fetch("https://" + host + "/createfolderifnotexists?auth=" +
+        encodeURIComponent(cfg.token) + "&path=" + encodeURIComponent(sciezkaDotad),
+        { method: "POST" });
+      const dane = await r.json().catch(() => ({}));
+      if (dane.result !== 0) throw new Error("pCloud: folder " + sciezkaDotad + " — " +
+        (dane.result === 2003
+          ? "brak prawa zapisu (folder udostępniony tylko do odczytu?)"
+          : (dane.error || "błąd " + dane.result)));
+      if (dane.metadata && dane.metadata.folderid) folderid = dane.metadata.folderid;
+    }
     const fd = new FormData();
     fd.append("file", blob, nazwa);
-    const resp = await fetch(url, { method: "POST", body: fd });
+    const resp = await fetch("https://" + host + "/uploadfile?auth=" + encodeURIComponent(cfg.token) +
+      "&folderid=" + folderid + "&filename=" + encodeURIComponent(nazwa) +
+      "&nopartial=1", { method: "POST", body: fd });
     const dane = await resp.json().catch(() => ({}));
     if (dane.result !== 0) throw new Error("pCloud: " + (dane.error || "błąd " + dane.result));
     return true;
