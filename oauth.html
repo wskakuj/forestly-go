@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ForestlyGO — logowanie Google</title>
+<title>Forestly GO — logowanie Google</title>
 <style>
   body{font-family:system-ui,-apple-system,sans-serif;background:#1c2333;color:#e8ecf5;
        display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
@@ -20,7 +20,7 @@
 </head>
 <body>
 <div class="karta">
-  <h2>ForestlyGO</h2>
+  <h2>Forestly GO</h2>
   <div id="tresc"><p>Ładowanie…</p></div>
 </div>
 <script>
@@ -39,22 +39,22 @@
   }
   if (blad) {
     akapit("Logowanie nie zostało dokończone (" + blad + ").", "zle");
-    akapit("Wróć do aplikacji ForestlyGO i spróbuj ponownie.");
+    akapit("Wróć do aplikacji Forestly GO i spróbuj ponownie.");
   } else if (kod) {
-    /* próbujemy wrócić do aplikacji ForestlyGO (telefon otworzy ją sam) */
+    /* próbujemy wrócić do aplikacji Forestly GO (telefon otworzy ją sam) */
     var cel = "forestlygo://oauth?code=" + encodeURIComponent(kod);
     akapit("✓ Zalogowano do Google", "ok");
-    akapit("Wracam do aplikacji ForestlyGO…");
+    akapit("Wracam do aplikacji Forestly GO…");
     var b = document.createElement("button");
     var a = document.createElement("a");
     a.href = cel;
     a.appendChild(b);
-    b.textContent = "Otwórz ForestlyGO";
+    b.textContent = "Otwórz Forestly GO";
     el.appendChild(a);
     akapit("Jeśli aplikacja nie otwiera się sama — dotknij przycisku powyżej (upewnij się, że masz najnowszą wersję aplikacji).");
     try { location.replace(cel); } catch (e) { /* nie tym razem */ }
   } else {
-    akapit("To strona zwrotna logowania ForestlyGO.", "zle");
+    akapit("To strona zwrotna logowania Forestly GO.", "zle");
     akapit("Otwórz ją, klikając „Zaloguj z Google…” w aplikacji.");
   }
 })();

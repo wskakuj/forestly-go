@@ -63,6 +63,26 @@ def set_current_version(ver):
     s2 = re.sub(r'WERSJA_APLIKACJI = "[^"]+"',
                 f'WERSJA_APLIKACJI = "{ver}"', s, count=1)
     WERSJA_PLIK.write_text(s2, encoding="utf-8")
+    # index.html — __htmlWersja musi być ZGODNA z wersja.js, inaczej
+    # samonaprawa w aplikacji przeładowuje stronę raz na sesję.
+    bez_v = ver.lstrip("v")
+    idx = REPO / "index.html"
+    if idx.exists():
+        t = idx.read_text(encoding="utf-8")
+        t2 = re.sub(r'__htmlWersja = "[^"]+"',
+                    f'__htmlWersja = "{bez_v}"', t, count=1)
+        if t2 != t:
+            idx.write_text(t2, encoding="utf-8")
+    # sw.js — nowa wersja cache'a wymusza odświeżenie starych plików
+    m = re.match(r"^v?(\d+)\.(\d+)\.(\d+)$", bez_v)
+    if m:
+        cache_v = f"v{int(m.group(2)) * 100 + int(m.group(3))}"   # v1.0.56 → v56
+        sw = REPO / "sw.js"
+        if sw.exists():
+            t = sw.read_text(encoding="utf-8")
+            t2 = re.sub(r"forestlygo-v\d+", f"forestlygo-{cache_v}", t, count=1)
+            if t2 != t:
+                sw.write_text(t2, encoding="utf-8")
 
 
 def _vt(v):

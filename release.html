@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ForestlyGO Release — wydawanie z telefonu</title>
+<title>Forestly GO Release — wydawanie z telefonu</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   :root {
@@ -67,7 +67,7 @@
 </head>
 <body>
 <header>
-  <b>🌲 ForestlyGO Release</b>
+  <b>🌲 Forestly GO Release</b>
   <small>wydawanie wersji Android prosto z telefonu — jak release.py na komputerze</small>
 </header>
 <main>
@@ -281,7 +281,7 @@ $("#btn-wyslij").addEventListener("click", async () => {
   if (!token) { log("Najpierw wklej token GitHub (krok 3).", "blad"); return; }
   if (!confirm("Wysłać release " + tag + " do " + WLASCIWIEL + "/" + REPO + "?\n\n" +
       ile + " plików z paczki + " + PLIK_WERSJI + " + RELEASE_NOTES.md\n" +
-      "Po wysłaniu GitHub Actions zbudują release: zip + APK ForestlyGO.")) return;
+      "Po wysłaniu GitHub Actions zbudują release: zip + APK Forestly GO.")) return;
 
   const btn = $("#btn-wyslij");
   btn.disabled = true;
@@ -309,7 +309,7 @@ $("#btn-wyslij").addEventListener("click", async () => {
 
     /* 3. notatka wydania */
     const notatka = $("#notatka").value.trim() || "Wydanie " + tag + ".";
-    const notes = "# " + tag + "\n\n" + notatka + "\n\n---\n*wydane z telefonu — ForestlyGO Release*\n";
+    const notes = "# " + tag + "\n\n" + notatka + "\n\n---\n*wydane z telefonu — Forestly GO Release*\n";
 
     /* 4. bloby */
     const tree = [];
@@ -350,7 +350,7 @@ $("#btn-wyslij").addEventListener("click", async () => {
       "<div class='podsumowanie'>Release <b>" + esc(tag) + "</b> wysłany ✓ (" + wszystkie.length + " plików)<br>" +
       "Za 3–6 minut: <a href='https://github.com/" + WLASCIWIEL + "/" + REPO + "/releases'>releases</a> · " +
       "<a href='https://github.com/" + WLASCIWIEL + "/" + REPO + "/actions'>actions</a><br><br>" +
-      "<span class='info'>Telefony z aplikacją ForestlyGO same zaproponują aktualizację (zielony baner),<br>" +
+      "<span class='info'>Telefony z aplikacją Forestly GO same zaproponują aktualizację (zielony baner),<br>" +
       "albo wymuś sprawdzenie w Sync → „↻ Sprawdź aktualizacje”.</span></div>";
   } catch (e) {
     log("BŁĄD: " + e.message, "blad");

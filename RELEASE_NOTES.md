@@ -1,3 +1,6 @@
-# Co nowego w Forestly GO v1.0.54
+# v1.0.55
 
-- 
+Wydanie v1.0.55.
+
+---
+*wydane z telefonu — ForestlyGO Release*

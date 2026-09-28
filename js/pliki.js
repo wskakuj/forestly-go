@@ -1,4 +1,4 @@
-/* ForestlyGO — pomost do aplikacji natywnej (Capacitor).
+/* Forestly GO — pomost do aplikacji natywnej (Capacitor).
    W przeglądarce (PWA na stronie) niczego nie zmienia — wszystkie
    funkcje mają zwykłą przeglądarkową ścieżkę zapasową.
    W APK (pliki wbudowane w aplikację) przejmuje zapis plików
@@ -85,7 +85,7 @@ async function pobierzIZainstalujApk(url, wersja) {
       "display:flex;align-items:center;justify-content:center;";
     nak.innerHTML = '<div style="background:#141a22;border:1px solid rgba(45,212,167,.45);' +
       'border-radius:14px;padding:22px;width:min(85vw,340px);font:600 14px system-ui,sans-serif;' +
-      'color:#eef2f6;text-align:center">Pobieram ForestlyGO ' + wersja +
+      'color:#eef2f6;text-align:center">Pobieram Forestly GO ' + wersja +
       '…<div style="height:8px;background:#0b0f14;border-radius:4px;margin-top:14px;overflow:hidden">' +
       '<i id="apk-pasek" style="display:block;height:100%;width:0;' +
       'background:linear-gradient(135deg,#2dd4a7,#38a3f8);transition:width .15s"></i></div>' +
@@ -131,7 +131,7 @@ async function pobierzIZainstalujApk(url, wersja) {
     "display:flex;align-items:center;justify-content:center;";
   nak.innerHTML = '<div style="background:#141a22;border:1px solid rgba(45,212,167,.45);' +
     'border-radius:14px;padding:22px;width:min(85vw,340px);font:600 14px system-ui,sans-serif;' +
-    'color:#eef2f6;text-align:center">Pobieram ForestlyGO ' + wersja +
+    'color:#eef2f6;text-align:center">Pobieram Forestly GO ' + wersja +
     '…<div style="height:8px;background:#0b0f14;border-radius:4px;margin-top:14px;overflow:hidden">' +
     '<i id="apk-pasek" style="display:block;height:100%;width:0;' +
     'background:linear-gradient(135deg,#2dd4a7,#38a3f8);transition:width .15s"></i></div>' +
@@ -159,7 +159,7 @@ async function pobierzIZainstalujApk(url, wersja) {
     const blob = new Blob(czesci);
     const b64 = await blobNaB64(blob);
     const FS = window.Capacitor.Plugins.Filesystem;
-    const w = await FS.writeFile({ path: "ForestlyGO-" + wersja + ".apk", directory: "CACHE", data: b64 });
+    const w = await FS.writeFile({ path: "Forestly GO-" + wersja + ".apk", directory: "CACHE", data: b64 });
     if (pasekEl()) pasekEl().style.width = "100%";
     const wyn = await Akt.zainstaluj({ uri: w.uri });
     nak.remove();

@@ -117,7 +117,7 @@ async function wybierzFolder() {
          własne anulowanie. Anulowanie nie jest błędem do naprawiania. */
       const anulowano = e && (e.name === "AbortError" || /abort/i.test(String(e.message)));
       if (anulowano) {
-        if (MOBILNY) toast("Na telefonie folder wskażesz w aplikacji natywnej (APK ForestlyGO) — " +
+        if (MOBILNY) toast("Na telefonie folder wskażesz w aplikacji natywnej (APK Forestly GO) — " +
           "to ona otwiera systemowy wybór folderu. W przeglądarce Excel pobierasz przyciskiem, " +
           "folder nie jest potrzebny.", 8000);
         return null;
@@ -126,7 +126,7 @@ async function wybierzFolder() {
     }
   }
   /* telefon w przeglądarce bez tego API (PWA): tłumaczymy zamiast rzucać błędem */
-  toast("Wybór folderu działa w aplikacji natywnej (APK ForestlyGO) i na komputerze " +
+  toast("Wybór folderu działa w aplikacji natywnej (APK Forestly GO) i na komputerze " +
         "w Chrome/Edge. Tutaj pliki Excel i tak pobierzesz przyciskiem — folder nie jest potrzebny.", 6000);
   return null;
 }
@@ -933,7 +933,7 @@ async function rysujSync() {
       }
       nota.textContent = naStronie
         ? "Ten skrót strony działa w przeglądarce — dlatego folderu nie da się wskazać. " +
-          "Zamknij i otwórz ikonę „ForestlyGO (APK)” z listy aplikacji: to zainstalowana aplikacja, " +
+          "Zamknij i otwórz ikonę „FORESTLY GO” z listy aplikacji: to zainstalowana aplikacja, " +
           "w niej wybór folderu i aktualizacje działają w aplikacji."
         : "Wygląda na to, że działa aplikacja natywna, ale jej mostek nie odpowiedział — " +
           "napisz mi o tym, poprowadzę przez naprawę.";

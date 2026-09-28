@@ -1,29 +1,39 @@
-FORESTLY GO — v1.0.48: ostrzeżenie o brakach przed zapisem
-===========================================================
+FORESTLY GO v1.0.56 — zmiana nazwy aplikacji
+===========================================
 
 CO NOWEGO
-  Przy „✓ Zapisz” aplikacja sprawdza ważne pola opisu. Jeśli czegoś
-  brakuje, pokaże się okno:
+  1. NAZWA APLIKACJI: „ForestlyGO (APK)" → „FORESTLY GO"
+     - ikona na liście aplikacji Android pokaże teraz „FORESTLY GO",
+     - nazwa widoczna też w konfiguracji Capacitora i tekstach aplikacji
+       (logowanie Google, polityka prywatności, pobieranie aktualizacji,
+       komunikaty o folderze).
+     NIE zmienione (celowo — żeby nic się nie zepsuło):
+     - identyfikator aplikacji com.wskakuj.forestlygo (aktualizacje
+       instalują się normalnie „na staryą" aplikację, dane zostają),
+     - nazwa pliku APK (ForestlyGO.apk) i prefiks plików sesji
+       (ForestlyGO_sesja_) — po nich szukają aktualizator i sesje,
+     - nazwa urządzenia w pCloud.
 
-      ⚠ Niepełny opis
-      Czego brakuje:
-      — zwarcie
-      — podszyt
-      Zapisać mimo to?
-      [← Wróć do formularza]   [Zapisz mimo to]
+  2. NAPRAWA ROZEJŚCIA WERSJI: na GitHubie był index.html 1.0.55,
+     a wersja.js v1.0.54 — samonaprawa przeładowywała aplikację raz
+     na sesję. Teraz oba mówią 1.0.56, a release.py przy każdym
+     wydaniu sam podmienia __htmlWersja w index.html oraz wersję
+     cache w sw.js — już się nie rozjadą.
 
-  Sprawdzane pola: numer wydzielenia, siedlisko, gatunek panujący,
-  zwarcie, podszyt.
-
-  NIE sprawdzane: pola opcjonalne (drugi gatunek, przedrostek/pjd.,
-  elementy taksacyjne, wskazania) oraz lokalizacja — zgodnie z życiem
-  w lesie, tam bywa różnie.
-
-  Wieś nadal blokuje zapis całkowicie (bez niej plik Excel nie ma
-  po czym się grupować) — to bez zmian.
-
-  Pełny opis zapisuje się od razu, bez pytania.
+  UWAGA
+  Nowa nazwa na ikonie pojawi się dopiero po zainstalowaniu NOWEGO
+  APK z release'u (aktualizacja „w aplikacji" podmienia tylko pliki
+  strony, nie nazwę ikony). Zainstaluj APK z release'u v1.0.56
+  ręcznie raz — dane (wpisy, logowania) zostają.
 
 ZMIENIONE PLIKI
-  index.html, css/app.css, js/app.js, js/wersja.js, sw.js,
-  RELEASE_NOTES.md, CO-CZYTAJ.txt
+  android/app/src/main/res/values/strings.xml
+  android/app/src/main/assets/capacitor.config.json
+  capacitor.config.json
+  js/wersja.js, js/app.js, js/pliki.js, sw.js, index.html
+  oauth.html, polityka-prywatnosci.html, release.html
+  release.py
+
+WYDANIE (jak zwykle)
+  Skopiuj pliki do repo, potem: python release.py  →  nowy tag
+  → Actions zbudują APK „FORESTLY GO".
