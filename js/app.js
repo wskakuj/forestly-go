@@ -262,7 +262,9 @@ function htmlStatusu() {
     return '<span class="st-off" style="text-decoration:none">sprawdzam…</span>';
   if (STATUS_POLACZENIA)
     return '<span class="st-on">online</span>';
-  return '<span class="st-off">online</span> <span class="st-lok">lokalnie</span>';
+  /* v1.0.59: „online lokalnie” myliło (słowo „online” na offline!) —
+     teraz wprost: offline, zapisujemy lokalnie */
+  return '<span class="st-off">offline</span> <span class="st-lok">zapis lokalny</span>';
 }
 function probeAdresu(url) {
   /* zapytanie bez CORS: odpowiedź sieciowa = serwer żyje, nawet bez nagłówków CORS */
@@ -306,6 +308,10 @@ window.addEventListener("offline", () => {
   const sub = $("#ab-sub");
   if (sub) sub.innerHTML = htmlStatusu();
 });
+/* v1.0.59: WebView rzadko odpala zdarzenia online/offline (a navigator.onLine
+   w trybie samolotowym kłamie „true”) — status i wysyłkę sprawdzamy sami,
+   sondując prawdziwe serwery chmur co minutę */
+setInterval(() => { if (!__probeWLocie) sprawdzPolaczenie(); }, 60000);
 
 /* ---------- pasek górny ---------- */
 async function odswiezAppbar() {
@@ -1326,7 +1332,7 @@ function zaplanujAutoWysylke(ms) {
 }
 async function autoWysylkaStart() {
   autoWysylkaTimer = null;
-  if (autoWysylkaTrwa || typeof CLOUDS === "undefined" || !navigator.onLine) return;
+  if (autoWysylkaTrwa || typeof CLOUDS === "undefined") return;
   autoWysylkaTrwa = true;
   try {
     const [pc, gd, nc] = await Promise.all(
@@ -1336,6 +1342,11 @@ async function autoWysylkaStart() {
     const wsie = [...new Set((await DB.wpisyAll())
       .filter(w => w.status !== "wyslany" && w.wies).map(w => w.wies))];
     if (!wsie.length) return;
+    /* v1.0.59: navigator.onLine w aplikacji Android kłamie — w trybie
+       samolotowym dalej mówi „online”. Zamiast niego sondujemy prawdziwe
+       serwery chmur; brak odpowiedzi = czekamy minutę i próbujemy znowu. */
+    await sprawdzPolaczenie();
+    if (!STATUS_POLACZENIA) { zaplanujAutoWysylke(60000); return; }
     let ok = 0, nie = 0;
     const wyslaneWsie = [];
     for (const wies of wsie) {
@@ -1351,15 +1362,20 @@ async function autoWysylkaStart() {
       }
     }
     if (ok) {
+      STATUS_POLACZENIA = true;
       toast("Auto-wysyłka: " + (ok === 1 ? "1 wieś" : ok + " wsi") + " wysłane ✓", 5000);
       SESJA.zapiszZLogiem();
       powiadomAndroid("Forestly GO — wysłano", "Opisy poszły do chmury: " + wyslaneWsie.join(", ") + ".");
     }
     if (ok || nie) { rysujWykaz(); rysujPulpitWsi(); }
-    if (nie) zaplanujAutoWysylke(5 * 60 * 1000);   /* jeszcze raz za 5 minut */
+    /* nie udało się? za minutę (wykryty brak sieci) albo za 5 minut (inny błąd) */
+    if (nie) zaplanujAutoWysylke(STATUS_POLACZENIA ? 5 * 60 * 1000 : 60000);
   } finally { autoWysylkaTrwa = false; }
 }
 window.addEventListener("online", () => zaplanujAutoWysylke(3000));
+/* v1.0.59: tętno auto-wysyłki — WebView nie zawsze odpala „online”,
+   więc co minutę sami zaglądamy, czy coś nie czeka na wysyłkę */
+setInterval(() => { if (!autoWysylkaTimer && !autoWysylkaTrwa) zaplanujAutoWysylke(500); }, 60000);
 /* szukajka w wykazie (warunkowo — na wypadek mieszanych plików po
    aktualizacji w tle, patrz lekcja z v1.0.50) */
 (function bindSzukajki() {
@@ -1435,7 +1451,7 @@ async function powiadomAndroid(tytul, tresc) {
 $("#bnav").addEventListener("click", e => {
   const bn = e.target.closest(".bn");
   if (!bn) return;
-  if (bn.id === "bn-wies") { otworzWyborWsi(); return; }
+  if (bn.id === "bn-wies") { przelaczTab("wsie"); return; }   /* v1.0.59: pulpit z kartami wsi — jak nazwa wsi u góry */
   if (bn.dataset.tab === "form" && !trybEdycji && !stan.wies && aktywnaWies) {
     /* „Nowy opis” otwiera formularz z ostatnio wpisywaną wsią */
     stan.wies = aktywnaWies;

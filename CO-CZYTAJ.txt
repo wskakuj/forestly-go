@@ -1,51 +1,42 @@
-FORESTLY GO v1.0.58 — szkic, potwierdzenie usuwania, powiadomienia
+FORESTLY GO v1.0.59 — naprawa trybu samolotowego + przycisk „Wieś”
 ==================================================================
 
-⚠⚠ WAŻNE — NIE WYDAWAJ v1.0.57 ⚠⚠
-  W v1.0.57 usunąłem z index.html wpis „js/sekret.js” mylnie sądząc, że
-  plik jest martwy. ALE workflow APK SAM GO GENERUJE (wkłada tam sekret
-  OAuth Dysku Google) — bez niego logowanie Dysku Google w APK v1.0.57
-  by nie działało. W v1.0.58 wpis jest z powrotem. Jeśli v1.0.57 już
-  został wydany — nie szkodzi wielka: v1.0.58 naprawia; pCloud działał
-  w obu. Wydaj od razu v1.0.58.
+CO BYŁO NIE TAK (zgłoszone z terenu)
+  Tryb samolotowy: aplikacja pokazywała „online”, twierdziła, że
+  wysłała — a tak naprawdę zrobił tylko lokalny zapis sesji, a wpisy
+  zostały FAŁSZYWIE oznaczone jako „wysłane”. Trzy przyczyny, wszystkie
+  naprawione:
 
-CO NOWEGO
-  1. SZKIC FORMULARZA (ochrona przed utratą pracy)
-     Niedokończony opis zapisuje się sam (co 4 s i przy chowaniu
-     strony). Padnie bateria, Android ubije aplikację — po uruchomieniu
-     pojawi się pytanie „Przywrócić niedokończony opis?” (wieś,
-     wydzielenie, godzina zapisu). Dotyczy tylko NOWEGO opisu; edycja
-     zapisanego wpisu i tak siedzi w bazie.
+  1. Sama wysyłka NIE sprawdzała, czy cokolwiek dotarło do chmury —
+     gdy wszystkie próby padły (brak sieci), wpisy i tak dostawały
+     status „wysłany” i znikały z kolejki. TERAZ: jeśli plik nie doszedł
+     do ŻADNEJ chmury, wpisy zostają „lokalne” i pójdą przy następnej
+     próbie (auto-wysyłka ponawia co minutę po wykryciu braku sieci,
+     co 5 minut przy innych błędach).
+  2. navigator.onLine w aplikacji Android kłamie — w trybie samolotowym
+     nadal mówi „online”. TERAZ: przed wysłaniem sondujemy PRAWDZIWE
+     serwery chmur (pCloud / Google / Nextcloud); brak odpowiedzi
+     = czekamy.
+  3. Pasek statusu przy braku sieci pokazywał napis „online lokalnie”
+     (słowo „online” na offline — moja wina, mylące) i nie odświeżał
+     się sam. TERAZ: przy braku sieci wprost „offline zapis lokalny”,
+     a status sprawdzany sondująco co minutę (zdarzenia online/offline
+     w WebView słabo działają).
 
-  2. POTWIERDZENIE USUWANIA
-     „×” przy wpisie w Wykazie pyta teraz „Usunąć wpis?” (pokazuje
-     co to za wpis) — dopiero „Usuń” kasuje. „Anuluj” (albo klik w tło
-     lub ✕) zamyka bez usunięcia.
+NOWE ZACHOWANIE (do sprawdzenia na telefonie)
+  - Tryb samolotowy: wpis zapisujesz normalnie, pulpit pokazuje
+    „Do wysłania: N …”, status „offline zapis lokalny”, NIC nie
+    twierdzi, że wysłano. Wyłączasz tryb samolotowy — w ciągu minuty
+    samo leci do chmury i przychodzi powiadomienie Androida.
+  - Ręczne „Wyślij” bez sieci mówi wprost: „wysyłka nie doszła do
+    żadnej chmury (pcloud: …)”.
 
-  3. POWIADOMIENIE ANDROIDA PO WYSŁANIU
-     Gdy automatyczna wysyłka doleci do chmury, na telefonie pojawia
-     się systemowe powiadomienie „Forestly GO — wysłano: <wsie>”.
-     Pierwsze wysłanie zapyta Androida o zgodę na powiadomienia —
-     zgodź się. (W przeglądarce/PWA powiadomień nie ma — tam został toast.)
+DROBNE
+  - Przycisk „Wieś” na dolnym pasku otwiera teraz pulpit z kartami wsi
+    (jak kliknięcie nazwy wsi u góry) — nie już listę rozwijaną.
 
-  4. STATYSTYKA DNIA na pulpicie wsi: „📅 Dziś: N opisów · M wsi”.
+ZMIENIONE PLIKI (względem v1.0.58)
+  index.html, js/app.js, js/clouds.js, js/wersja.js, sw.js
 
-  5. KARTY WSI PO OSTATNIEJ AKTYWNOŚCI
-     Wieś, w której ostatnio pracowałeś, jest na górze z zieloną
-     plakietką „ostatnio”; reszta wg daty ostatniego wpisu.
-
-  6. KONTRAST (do oceny w słońcu)
-     Podpowiedzi pod etykietami (np. „plik Excel grupuje się po tym
-     polu”) większe i jaśniejsze; podsumowanie w pasku zapisu
-     (siedlisko · gatunki · zwarcie) większe i jaśniejsze.
-     Jak coś za bardzo „krzyczy” — damy cichsze w jednej linijce CSS.
-
-TECHNICZNE
-  - dodana wtyczka @capacitor/local-notifications (package.json +
-    package-lock.json — workflow wciągnie ją sam przez npm ci / cap sync);
-  - przywrócony wpis js/sekret.js (patrz ostrzeżenie na górze);
-  - wydanie jak zwykle: skopiuj pliki do repo, python release.py → v1.0.58.
-
-ZMIENIONE PLIKI (względem v1.0.57)
-  index.html, js/app.js, js/wersja.js, css/app.css, sw.js,
-  package.json, package-lock.json
+WYDANIE
+  Skopiuj pliki do repo i: python release.py → v1.0.59.

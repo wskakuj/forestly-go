@@ -440,6 +440,14 @@ const CLOUDS = (() => {
     const nazwa = XLSXIO.nazwaPliku(wies, autor);
     const raport = await wyslijPlik(wies, blob, nazwa);
 
+    /* v1.0.59: gdy wysyłka NIE doszła do ŻADNEJ chmury (np. tryb
+       samolotowy, brak zasięgu) — NIE oznaczamy wpisów jako wysłane.
+       Wpisy zostają w kolejce i pojdą przy następnej próbie. */
+    if (!Object.values(raport).some(v => v === "ok")) {
+      const bledy = Object.entries(raport).map(([k, v]) => k + ": " + v).join("; ");
+      throw new Error("wysyłka nie doszła do żadnej chmury (" + bledy + ")");
+    }
+
     const teraz = new Date().toISOString();
     for (const w of wpisy) {
       w.status = "wyslany";
