@@ -7,7 +7,11 @@
 <!-- wersja tego pliku HTML — samonaprawa w app.js porównuje ją z wersją
      skryptów; przy niezgodności (aktualizacja w tle podała miks plików)
      strona przeładowuje się RAZ i dostaje spójny komplet -->
+<<<<<<< Updated upstream
 <script>window.__htmlWersja = "1.0.61";</script>
+=======
+<script>window.__htmlWersja = "1.0.62";</script>
+>>>>>>> Stashed changes
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -324,6 +328,26 @@
   </div>
 </div>
 
+<<<<<<< Updated upstream
+=======
+<!-- ostrzeżenie o duplikacie wydzielenia (v1.0.62) -->
+<div class="okno" id="okno-duplikaty">
+  <div class="okno-karta">
+    <div class="okno-naglowek"><b>⚠ Duplikat wydzielenia</b>
+      <button type="button" class="okno-x" id="dup-zamknij">✕</button></div>
+    <div class="braki-tresc">
+      <p>Ten numer wydzielenia masz już zapisany w tej wsi:</p>
+      <ul id="dup-lista"></ul>
+      <p class="braki-pytanie">To na pewno inne wydzielenie?</p>
+    </div>
+    <div class="braki-akcje">
+      <button type="button" class="fab szary" id="dup-wroc">← Wróć do formularza</button>
+      <button type="button" class="fab" id="dup-zapisz">Zapisz mimo to</button>
+    </div>
+  </div>
+</div>
+
+>>>>>>> Stashed changes
 <div id="toast" class="toast"></div>
 
 <input type="file" id="plik-backup" accept=".json,application/json" hidden>

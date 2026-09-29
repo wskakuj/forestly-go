@@ -725,6 +725,12 @@ async function zapiszWpis(pominWalidacje) {
     const braki = brakujacePola();
     if (braki.length) { pokazOstrzezenieBraki(braki); return; }
   }
+  /* v1.0.62: numer wydzielenia już zapisany w tej wsi? Pytamy przed zapisem
+     („Zapisz mimo to” pomija i tę kontrolę — to świadoma decyzja użytkownika) */
+  if (!pominWalidacje) {
+    const dupl = await duplikatyDzialek();
+    if (dupl.length && pokazOstrzezenieDuplikaty(dupl)) return;
+  }
   const wpis = Object.assign({}, stan, {
     id: trybEdycji || ("w" + Date.now() + "-" + Math.random().toString(36).slice(2, 7)),
     autor,
@@ -751,6 +757,46 @@ async function zapiszWpis(pominWalidacje) {
   rysujWykaz();
   zaplanujAutoWysylke();   /* jest zasięg? za chwilę samo poleci do chmury */
 }
+/* v1.0.62: duplikaty numerów wydzieleń — sprawdzane przy zapisie.
+   Porównujemy bez wielkości liter i zerowych odstępów (12A = 12a);
+   edytowany wpis nie koliduje sam ze sobą; usuniętych nie liczymy. */
+async function duplikatyDzialek() {
+  if (!stan.wies || !(stan.dzialki || []).length) return [];
+  const norm = d => String(d || "").trim().toLowerCase();
+  const moje = stan.dzialki.map(norm);
+  const wszystkie = (await DB.wpisyAll()).filter(x => !x.usuniety && x.wies === stan.wies);
+  const wyniki = [];
+  for (const x of wszystkie) {
+    if (trybEdycji && x.id === trybEdycji) continue;
+    for (const d of (x.dzialki || [])) {
+      if (moje.includes(norm(d))) wyniki.push({ nr: d, wpis: x });
+    }
+  }
+  return wyniki;
+}
+/* zwraca true, gdy okno pokazano; false gdy okna nie ma (miks starych
+   plików po aktualizacji w tle) — wtedy zapisujemy bez pytania */
+function pokazOstrzezenieDuplikaty(duplikaty) {
+  const okno = document.getElementById("okno-duplikaty");
+  if (!okno) return false;
+  const lista = document.getElementById("dup-lista");
+  if (lista) lista.innerHTML = duplikaty.map(d =>
+    `<li><b>${d.nr}</b> — zapisany ${new Date(d.wpis.timestamp).toLocaleDateString("pl-PL")}, ` +
+    `${OPTAX.jednaLinia(d.wpis).slice(0, 45)}</li>`).join("");
+  okno.classList.add("on");
+  return true;
+}
+/* przyciski okna duplikatów (warunkowe — lekcja z v1.0.50) */
+(function bindOknaDuplikaty() {
+  const okno = document.getElementById("okno-duplikaty");
+  if (!okno) return;
+  const zamknij = () => okno.classList.remove("on");
+  const b = id => document.getElementById(id);
+  if (b("dup-zamknij")) b("dup-zamknij").addEventListener("click", zamknij);
+  if (b("dup-wroc")) b("dup-wroc").addEventListener("click", zamknij);
+  if (b("dup-zapisz")) b("dup-zapisz").addEventListener("click", () => { zamknij(); zapiszWpis(true); });
+  okno.addEventListener("click", e => { if (e.target === okno) zamknij(); });
+})();
 /* braki w opisie: pola, które powinny być wypełnione
    (opcjonalne — pjd, drugi gatunek, elementy taksacyjne, wskazania —
    oraz lokalizacja NIE są sprawdzane; wieś blokuje zapis osobno) */
