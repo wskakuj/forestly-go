@@ -65,16 +65,28 @@ async function rysujPulpitWsi() {
     (nieslane === 1 ? "wpis" : (nieslane % 10 >= 2 && nieslane % 10 <= 4 &&
       (nieslane % 100 < 10 || nieslane % 100 >= 20) ? "wpisy" : "wpisów")) +
     " — wyślę automatycznie, gdy będzie zasięg</div>" : "";
+  /* statystyka dnia (v1.0.58) */
+  const dzis0 = new Date();
+  const dzis = dzis0.getFullYear() + "-" + String(dzis0.getMonth() + 1).padStart(2, "0") + "-" + String(dzis0.getDate()).padStart(2, "0");
+  const dzisWpisy = wszystkie.filter(x => (x.timestamp || "").slice(0, 10) === dzis);
+  const dzisWsie = new Set(dzisWpisy.map(x => x.wies)).size;
+  const odmOpis = n => n === 1 ? "opis" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "opisy" : "opisów");
+  const statystyka = dzisWpisy.length ? `<div class="pulpit-dzis">📅 Dziś: <b>${dzisWpisy.length}</b> ${odmOpis(dzisWpisy.length)} · ${dzisWsie} ${dzisWsie === 1 ? "wieś" : "wsi"}</div>` : "";
+  /* karty wsi posortowane po ostatniej aktywności (v1.0.58) */
+  const ostatnio = new Map(wsie.map(w => [w, Math.max(0, ...wszystkie
+    .filter(x => x.wies === w).map(x => new Date(x.timestamp || 0).getTime() || 0))]));
+  wsie.sort((a, b) => (ostatnio.get(b) || 0) - (ostatnio.get(a) || 0));
+  const najnowsza = wsie[0];
   const karty = wsie.map(w => {
     const ile = wszystkie.filter(x => x.wies === w).length;
     const wyslane = wszystkie.filter(x => x.wies === w && x.status === "wyslany").length;
     return `<div class="wies-card" data-wies="${w}">
       <div class="wc-gora"><span class="wc-ikona">🌲</span><span class="wc-ile">${ile}</span></div>
-      <b>${w}</b>
+      <b>${w}${w === najnowsza ? ' <span class="wc-ostatnio">ostatnio</span>' : ""}</b>
       <small>${wyslane === ile ? "wszystko wysłane ✓" : "do wysłania: " + (ile - wyslane)}</small>
     </div>`;
   }).join("");
-  box.innerHTML = baner + (wsie.length ? karty : '<div class="pulpit-info" style="text-align:center;margin-top:24vh">— jeszcze nic nie zebrane —</div>') +
+  box.innerHTML = statystyka + baner + (wsie.length ? karty : '<div class="pulpit-info" style="text-align:center;margin-top:24vh">— jeszcze nic nie zebrane —</div>') +
     `<div class="wies-card wies-nowa" id="wies-nowa">
       <div class="wc-gora"><span class="wc-ikona">＋</span></div>
       <b>Nowa wieś</b><small>nazwę wpiszesz przy pierwszym opisie</small>
@@ -715,6 +727,7 @@ async function zapiszWpis(pominWalidacje) {
     poprawionyPoWyslce: undefined
   });
   await DB.wpisyPut(wpis);
+  try { localStorage.removeItem(SZKIC); } catch (e) {}   /* zapisane = szkic zbędny */
   CLOUDS.log("<b>zapisano wpis</b> " + oddzPelne(wpis) + " (" + wpis.wies + ") — " + (trybEdycji ? "poprawka, plik w kolejce" : "lokalny"));
   toast(trybEdycji ? "Poprawka zapisana — plik wróci do kolejki wysyłki" : "Opis zapisany ✓");
   trybEdycji = null;
@@ -829,9 +842,22 @@ $("#wykaz-lista").addEventListener("click", async e => {
   const del = e.target.closest("[data-del]");
   if (del) {
     e.stopPropagation();
-    await DB.wpisyDelete(del.dataset.del);
-    SESJA.zapiszZLogiem();
-    rysujWykaz(); toast("Wpis usunięty");
+    const w = (await DB.wpisyAll()).find(x => x.id === del.dataset.del);
+    if (!w) return;
+    /* potwierdzenie (v1.0.58); gdy okna nie ma (miks starych plików po
+       aktualizacji w tle) — kasujemy od razu, jak kiedyś */
+    const okno = document.getElementById("okno-usun");
+    if (!okno) {
+      await DB.wpisyDelete(del.dataset.del);
+      SESJA.zapiszZLogiem();
+      rysujWykaz(); toast("Wpis usunięty");
+      return;
+    }
+    window.__doUsuniecia = w.id;
+    const tresc = document.getElementById("usun-tresc");
+    if (tresc) tresc.textContent = identyfikatorWpisu(w) + " — " +
+      OPTAX.jednaLinia(w).slice(0, 60) + " (" + w.wies + ")";
+    okno.classList.add("on");
     return;
   }
   /* duplikowanie: kopia wpisu do edycji — bez numeru wydzielenia
@@ -1311,10 +1337,12 @@ async function autoWysylkaStart() {
       .filter(w => w.status !== "wyslany" && w.wies).map(w => w.wies))];
     if (!wsie.length) return;
     let ok = 0, nie = 0;
+    const wyslaneWsie = [];
     for (const wies of wsie) {
       try {
         const r = await CLOUDS.synchronizujWies(null, wies);
         ok++;
+        wyslaneWsie.push(wies);
         CLOUDS.log("<b>auto-wysyłka</b> — " + r.nazwa + " (" + r.ile + " wpisów)");
       } catch (e) {
         if (String(e && e.message || e).includes("brak skonfigurowanych")) return;
@@ -1325,6 +1353,7 @@ async function autoWysylkaStart() {
     if (ok) {
       toast("Auto-wysyłka: " + (ok === 1 ? "1 wieś" : ok + " wsi") + " wysłane ✓", 5000);
       SESJA.zapiszZLogiem();
+      powiadomAndroid("Forestly GO — wysłano", "Opisy poszły do chmury: " + wyslaneWsie.join(", ") + ".");
     }
     if (ok || nie) { rysujWykaz(); rysujPulpitWsi(); }
     if (nie) zaplanujAutoWysylke(5 * 60 * 1000);   /* jeszcze raz za 5 minut */
@@ -1338,6 +1367,70 @@ window.addEventListener("online", () => zaplanujAutoWysylke(3000));
   if (sz) sz.addEventListener("input", () => rysujWykaz());
 })();
 
+/* przyciski okna usuwania (warunkowe — patrz lekcja z v1.0.50) */
+(function bindOknaUsun() {
+  const okno = document.getElementById("okno-usun");
+  if (!okno) return;
+  const zamknij = () => okno.classList.remove("on");
+  const b = id => document.getElementById(id);
+  if (b("usun-zamknij")) b("usun-zamknij").addEventListener("click", zamknij);
+  if (b("usun-anuluj")) b("usun-anuluj").addEventListener("click", () => { window.__doUsuniecia = null; zamknij(); });
+  if (b("usun-potwierdz")) b("usun-potwierdz").addEventListener("click", async () => {
+    const id = window.__doUsuniecia; zamknij(); window.__doUsuniecia = null;
+    if (!id) return;
+    await DB.wpisyDelete(id);
+    SESJA.zapiszZLogiem();
+    rysujWykaz(); rysujPulpitWsi();
+    toast("Wpis usunięty");
+  });
+  okno.addEventListener("click", e => { if (e.target === okno) zamknij(); });
+})();
+/* szkic formularza (v1.0.58): awaryjny autozapis co 4 s + przy chowaniu
+   strony — gdy bateria padnie albo Android ubije aplikację, niedokończony
+   opis wraca po restarcie (pytanie przy uruchomieniu). Edycja istniejącego
+   wpisu nie jest szkicem — oryginał i tak siedzi w bazie. */
+const SZKIC = "fg_szkic";
+function szkicPusty(s) {
+  /* sama nazwa wsi nie jest szkicem — start ustawia ją z „ostatniej wsi”,
+     pytanie przy każdym uruchomieniu byłoby fałszywym alarmem */
+  return !(s.dzialki && s.dzialki.length) && !s.siedlisko && !s.panujacy;
+}
+function zapiszSzkic() {
+  try {
+    if (trybEdycji || szkicPusty(stan)) { localStorage.removeItem(SZKIC); return; }
+    localStorage.setItem(SZKIC, JSON.stringify({ stan, zapis: new Date().toISOString() }));
+  } catch (e) { /* quota / tryb prywatny — po prostu bez szkicu */ }
+}
+setInterval(zapiszSzkic, 4000);
+window.addEventListener("pagehide", zapiszSzkic);
+async function mozePrzywrocSzkic() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(SZKIC) || "null"); } catch (e) { s = null; }
+  if (!s || !s.stan || szkicPusty(s.stan)) { localStorage.removeItem(SZKIC); return; }
+  const st = Object.assign(nowyStan(), s.stan, { dzialki: s.stan.dzialki || [], pjd: s.stan.pjd || [], podsz: s.stan.podsz || [] });
+  const kiedy = new Date(s.zapis).toLocaleString("pl-PL");
+  const nr = st.dzialki.length ? st.dzialki.join(", ") : "bez numeru";
+  const chce = confirm("Masz niedokończony opis:\n" +
+    "wieś " + (st.wies || "—") + ", wydzielenie " + nr + "\n" +
+    "(zapisany w szkicu " + kiedy + ")\n\nPrzywrócić go do formularza?");
+  if (chce) { trybEdycji = null; stan = st; uzupelnijForm(); rysuj(); przelaczTab("form"); }
+  else localStorage.removeItem(SZKIC);
+}
+/* powiadomienie systemowe Androida (v1.0.58) — działa w APK (wtyczka
+   LocalNotifications z Capacitora); w przeglądarce/PWA pomijamy */
+async function powiadomAndroid(tytul, tresc) {
+  try {
+    if (!window.Capacitor || !Capacitor.Plugins || !Capacitor.Plugins.LocalNotifications) return;
+    const LN = Capacitor.Plugins.LocalNotifications;
+    let p = await LN.checkPermissions();
+    if (p.display !== "granted") {
+      p = await LN.requestPermissions();
+      if (p.display !== "granted") return;
+    }
+    await LN.schedule({ notifications: [{
+      title: tytul, body: tresc, id: Date.now() % 2147483647 }] });
+  } catch (e) { /* ozdoba — błąd ignorujemy */ }
+}
 /* ---------- nawigacja ---------- */
 $("#bnav").addEventListener("click", e => {
   const bn = e.target.closest(".bn");
@@ -1511,6 +1604,7 @@ async function start() {
     const ostatniaWies = await DB.metaGet("ostatniaWies");
     if (ostatniaWies) stan.wies = ostatniaWies;
     przelaczTab("wsie");
+    mozePrzywrocSzkic();   /* v1.0.58: niedokończony opis z poprzedniej sesji? */
   }
   await odswiezListeWsi();
   // dokończenie instalacji, jeśli była pobrana, a brakowało zgody systemowej

@@ -1,57 +1,51 @@
-FORESTLY GO v1.0.57 — duplikowanie, auto-wysyłka, szukajka + nazwa
+FORESTLY GO v1.0.58 — szkic, potwierdzenie usuwania, powiadomienia
 ==================================================================
 
-UWAGA: ta paczka ZAWIERA też całą zmianę nazwy z v1.0.56 — jeśli nie
-wydałeś jeszcze v1.0.56, wydaj od razu v1.0.57 (pomiń v1.0.56).
+⚠⚠ WAŻNE — NIE WYDAWAJ v1.0.57 ⚠⚠
+  W v1.0.57 usunąłem z index.html wpis „js/sekret.js” mylnie sądząc, że
+  plik jest martwy. ALE workflow APK SAM GO GENERUJE (wkłada tam sekret
+  OAuth Dysku Google) — bez niego logowanie Dysku Google w APK v1.0.57
+  by nie działało. W v1.0.58 wpis jest z powrotem. Jeśli v1.0.57 już
+  został wydany — nie szkodzi wielka: v1.0.58 naprawia; pCloud działał
+  w obu. Wydaj od razu v1.0.58.
 
 CO NOWEGO
-  1. DUPLIKOWANIE WYDZIELENIA (przycisk ⧉ w Wykazie)
-     Klikasz ⧉ przy wpisie → otwiera się formularz nowego opisu z
-     przekopiowanym WSZYSTKIM (wieś, siedlisko, skład, wiek, zwarcie,
-     podszyt…), ALE bez numeru wydzielenia i lokalizacji — te uzupełniasz
-     dla nowego wydzielenia i zapisujesz. Pomyślane o podobnych,
-     sąsiadujących wydzieleniach.
+  1. SZKIC FORMULARZA (ochrona przed utratą pracy)
+     Niedokończony opis zapisuje się sam (co 4 s i przy chowaniu
+     strony). Padnie bateria, Android ubije aplikację — po uruchomieniu
+     pojawi się pytanie „Przywrócić niedokończony opis?” (wieś,
+     wydzielenie, godzina zapisu). Dotyczy tylko NOWEGO opisu; edycja
+     zapisanego wpisu i tak siedzi w bazie.
 
-  2. AUTOMATYCZNA WYSYŁKA
-     Wpisy „lokalne” i „w kolejce” wysyłają się SAME do chmury:
-     - ok. 12 s po zapisie opisu,
-     - 3 s po powrocie internetu (wychodzisz z lasu, telefon łapie
-       zasięg — i leci),
-     - 10 s po uruchomieniu aplikacji.
-     Wysyłka idzie całą wsią, tak jak przyciskiem „Wyślij” — plik Excel
-     w chmurze ODŚWIEŻA SIĘ o nowe i poprawione wpisy (tak ma być).
-     Przy nieudanej próbie (np. słaby zasięg) próbuje dalej co 5 minut.
-     Krótki toast i wpis w dzienniku Sync — nic nie przeszkadza w pracy.
-     Działa tylko przy skonfigurowanej chmurze (pCloud / Dysk Google).
+  2. POTWIERDZENIE USUWANIA
+     „×” przy wpisie w Wykazie pyta teraz „Usunąć wpis?” (pokazuje
+     co to za wpis) — dopiero „Usuń” kasuje. „Anuluj” (albo klik w tło
+     lub ✕) zamyka bez usunięcia.
 
-  3. LICZNIK NIEWYSŁANYCH na pulpicie wsi ( Wieś )
-     Niebieski pasek „⬆ Do wysłania: N wpisów — wyślę automatycznie,
-     gdy będzie zasięg”. Znika, gdy wszystko dojdzie do chmury.
-     (Sama koncepcja: wpisy siedzą w pamięci przeglądarki aplikacji —
-     dopóki nie trafią do chmury, żyją tylko na telefonie. Licznik
-     mówi wprost, ile ich jeszcze tam siedzi.)
+  3. POWIADOMIENIE ANDROIDA PO WYSŁANIU
+     Gdy automatyczna wysyłka doleci do chmury, na telefonie pojawia
+     się systemowe powiadomienie „Forestly GO — wysłano: <wsie>”.
+     Pierwsze wysłanie zapyta Androida o zgodę na powiadomienia —
+     zgodź się. (W przeglądarce/PWA powiadomień nie ma — tam został toast.)
 
-  4. SZUKAJKA w Wykazie — filtruje po numerze wydzielenia, wsi
-     i opisie drzewostanu (np. „12a”, „sośnina”, nazwa wsi).
+  4. STATYSTYKA DNIA na pulpicie wsi: „📅 Dziś: N opisów · M wsi”.
 
-  5. ZMIANA NAZWY APLIKACJI (z v1.0.56): „FORESTLY GO” na ikonie
-     Androida (zamiast „ForestlyGO (APK)”) + spójne teksty aplikacji.
-     Nowa nazwa na ikonie pojawi się po zainstalowaniu APK z release'u
-     (aktualizacja „w aplikacji” podmienia tylko pliki strony).
+  5. KARTY WSI PO OSTATNIEJ AKTYWNOŚCI
+     Wieś, w której ostatnio pracowałeś, jest na górze z zieloną
+     plakietką „ostatnio”; reszta wg daty ostatniego wpisu.
 
-  6. SPRZĄTANIE: usunięto martwe odwołanie do js/sekret.js (404
-     w konsoli), naprawione rozjechanie wersji 1.0.55/1.0.54 (extra
-     przeładowanie raz na sesję), release.py pilnuje zgodności wersji
-     i cache przy każdym wydaniu.
+  6. KONTRAST (do oceny w słońcu)
+     Podpowiedzi pod etykietami (np. „plik Excel grupuje się po tym
+     polu”) większe i jaśniejsze; podsumowanie w pasku zapisu
+     (siedlisko · gatunki · zwarcie) większe i jaśniejsze.
+     Jak coś za bardzo „krzyczy” — damy cichsze w jednej linijce CSS.
 
-ZMIENIONE PLIKI (względem v1.0.55)
-  index.html, js/app.js, js/wersja.js, js/pliki.js, css/app.css,
-  sw.js, oauth.html, polityka-prywatnosci.html, release.html,
-  release.py, capacitor.config.json,
-  android/app/src/main/res/values/strings.xml,
-  android/app/src/main/assets/capacitor.config.json
+TECHNICZNE
+  - dodana wtyczka @capacitor/local-notifications (package.json +
+    package-lock.json — workflow wciągnie ją sam przez npm ci / cap sync);
+  - przywrócony wpis js/sekret.js (patrz ostrzeżenie na górze);
+  - wydanie jak zwykle: skopiuj pliki do repo, python release.py → v1.0.58.
 
-WYDANIE
-  Skopiuj pliki do repo i wydaj: python release.py → v1.0.57 → APK
-  „FORESTLY GO” z Actions. Pierwszy raz po instalacji APK ikona zmieni
-  nazwę; dane (wpisy, logowania) zostają.
+ZMIENIONE PLIKI (względem v1.0.57)
+  index.html, js/app.js, js/wersja.js, css/app.css, sw.js,
+  package.json, package-lock.json
