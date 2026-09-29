@@ -946,9 +946,12 @@ async function sprawdzAktualizacjeApk() {
       const u = localStorage.getItem("apk_url") || "https://github.com/wskakuj/forestly-go/releases/latest";
       banerAktualizacji(pamietana, u);
     }
-    // GitHub odpytywany najwyżej raz na 6 h (limit 60 zapytań/h)
+    /* v1.0.61: sprawdzamy PRZY KAŻDYM otwarciu aplikacji (wcześniej
+       najwyżej raz na 6 h); mini-ogranicznik 60 s chroni tylko przed
+       przypadkowym zdwojeniem w tej samej minucie. Jedno zapytanie na
+       otwarcie spokojnie mieści się w limicie GitHuba (60/h). */
     const teraz = Date.now(), ostatni = +(localStorage.getItem("apk_check") || 0);
-    if (teraz - ostatni < 6 * 60 * 60 * 1000) return;
+    if (teraz - ostatni < 60 * 1000) return;
     localStorage.setItem("apk_check", String(teraz));
     const r = await fetch("https://api.github.com/repos/wskakuj/forestly-go/releases/latest");
     if (!r.ok) return;

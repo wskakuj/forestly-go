@@ -1,31 +1,23 @@
-FORESTLY GO v1.0.60 — usunięte wpisy zostają w Excelu + statystyka w słupku
-==========================================================================
+FORESTLY GO v1.0.61 — aktualizacje przy każdym otwarciu + krótszy opis backupu
+=============================================================================
 
 CO NOWEGO
+  1. SPRAWDZANIE AKTUALIZACJI PRZY KAŻDYM OTWARCIU APLIKACJI
+     Dotąd aplikacja pytała GitHub o nowszą wersję najwyżej raz na 6
+     godzin. Teraz pyta PRZY KAŻDYM otwarciu — wydajesz wersję, a
+     telefony same pokazują zielony baner przy następnym uruchomieniu.
+     (Zostawiono mini-ogranicznik 60 sekund — chroni tylko przed
+     przypadkowym zdwojeniem zapytania w tej samej minucie; jedno
+     zapytanie na otwarcie spokojnie mieści się w limicie GitHuba.)
 
-  1. USUNIĘTY OPIS NIE ZNIKA Z EXCELA
-     Dotąd „Usuń” wywalał wpis na amen — z telefonu i (przy najbliższej
-     wysyłce) z Excela w chmurze. Teraz: wpis znika z aplikacji
-     (wykaz, pulpit, mapa), ale w Excelu w chmurze ZOSTAJE i dostaje
-     dopisek w nowej ostatniej kolumnie „usuniety”:
-         USUNIĘTY 2026-09-29
-     (z datą usunięcia). Historia się nie gubi, a w tabeli widać
-     czarno na białym, że wpis był i ktoś go skasował.
+  2. OPIS BACKUPU SESJI SKRÓCONY
+     W zakładce Sync karta „Backup sesji” mówi teraz tylko:
+     „Po każdym wpisie cała sesja (autor + wszystkie opisy, bez haseł)
+     zapisuje się jako plik ForestlyGO_sesja_….json w wybranym folderze.”
+     (usunięto zdanie o czyszczeniu danych przeglądarki przez iPhone)
 
-     Jak to działa: usunięcie oznacza wpis w bazie jako nagrobek;
-     przy najbliższej wysyłce wsi (auto-wysyłka ogarnia to sama) plik
-     Excel odświeża się z dopiskiem, a potem nagrobek już nie wywołuje
-     kolejnych wysyłek.
-
-  2. STATYSTYKA DNIA — JEDEN POD DRUGIM
-     Zamiast „Dziś: 2 opisy · 1 wieś” w jednej linii, teraz:
-         📅 Dziś
-         opisy: 2
-         wsi: 1
-     (każda pozycja w osobnej linii)
-
-ZMIENIONE PLIKI (względem v1.0.59)
-  index.html, js/app.js, js/xlsx-io.js, js/wersja.js, sw.js
+ZMIENIONE PLIKI (względem v1.0.60)
+  index.html, js/app.js, js/wersja.js, sw.js
 
 WYDANIE
-  Skopiuj pliki do repo i: python release.py → v1.0.60.
+  Skopiuj pliki do repo i: python release.py → v1.0.61.

@@ -1,6 +1,6 @@
-# v1.0.59
+# v1.0.60
 
-Wydanie v1.0.59.
+Wydanie v1.0.60.
 
 ---
 *wydane z telefonu — ForestlyGO Release*
