@@ -1,0 +1,31 @@
+NAPRAWA: "updated upstream / stashed changes" na ekranie
+=========================================================
+
+CO SIĘ STAŁO
+  W repozytorium FORESTLY GO na gałęzi main dostały się znaczniki
+  nierozwiązanego konfliktu gita (3 pliki: index.html, js/wersja.js,
+  sw.js). Powstaje to klasycznie przy: zmiany "na boku" (stash),
+  potem pull, potem "pop" — git nie umie scalić i wstawia znaczniki
+  <<<<<<< / ======= / >>>>>>>, a one weszły w commit i na serwer.
+  Aplikacja pokazywała je na górze i na dole ekranu, bo to zwykły
+  tekst w plikach.
+
+CO ZOSTAŁO ZROBIONE
+  We wszystkich konfliktach zostawiono nowszą stronę (v1.0.62):
+  - js/wersja.js: WERSJA_APLIKACJI = "v1.0.62"
+  - sw.js:        WERSJA = "forestlygo-v62"
+  - index.html:   __htmlWersja = "1.0.62" + okno ostrzeżenia
+                  o duplikacie wydzielenia (v1.0.62)
+
+INSTALACJA
+  1. Skopiuj te 3 pliki do swojego lokalnego repo GO
+     (nadpisz: index.html, js/wersja.js, sw.js).
+  2. Commit + push na main.
+  3. Na telefonie: zamknij całkiem aplikację i otwórz ponownie
+     (w razie czego drugi raz — samonaprawa wersji załaduje
+     spójny komplet).
+
+JAK UNIKAĆ NA PRZYSZŁOŚĆ
+  Przed pull/push w VS Code: jeśli masz zmiany "na boku", najpierw
+  je zcommituj (nie trzymaj w stash przy pullu), a po każdym
+  scaleniu sprawdź, że w plikach nie ma ">>>>>>>" albo "=======".
