@@ -409,8 +409,9 @@ const CLOUDS = (() => {
 
   /* ---------- SYNCHRONIZACJA ---------- */
   /* Wysyła plik jednej wsi na wszystkie skonfigurowane chmury.
-     Zwraca raport: { nextcloud: "ok"|blad, pcloud: ..., gdrive: ... } */
-  async function wyslijPlik(wies, blob, nazwa) {
+     Zwraca raport: { nextcloud: "ok"|blad, pcloud: ..., gdrive: ... }
+     (v1.0.63: wspólny trzon wysyłki — korzysta z niego też backup sesji) */
+  async function wyslijNazwa(nazwa, blob) {
     const raport = {};
     const [nc, pc, gd] = await Promise.all([
       DB.metaGet("nextcloud"), DB.metaGet("pcloud"), DB.metaGet("gdrive")
@@ -429,6 +430,97 @@ const CLOUDS = (() => {
       raport[nazwaChmury] = w.status === "fulfilled" ? "ok" : String(w.reason && w.reason.message || w.reason);
     });
     return raport;
+  }
+
+  async function wyslijPlik(wies, blob, nazwa) {
+    return wyslijNazwa(nazwa, blob);
+  }
+
+  /* ---------- BACKUP SESJI W CHMURZE (v1.0.63) ----------
+     Jeden mały plik JSON w folderze autora (FORESTLY GO/<leśnik>/backup_sesji.json)
+     z całą sesją: autor + wszystkie wpisy + ostatnia wieś. Bez haseł.
+     Dzięki temu nowy telefon albo kolejny leśnik (wspólne konto chmury)
+     może pobrać całość po wpisaniu nazwy leśnika. */
+  const NAZWA_BACKUPU = "backup_sesji.json";
+
+  async function wyslijBackup(blob) {
+    return wyslijNazwa(NAZWA_BACKUPU, blob);
+  }
+
+  async function nextcloudGet(cfg, nazwa) {
+    const autor = await sciezkaAutor();
+    const baza = cfg.url.replace(/\/+$/, "") + "/remote.php/dav/files/" + encodeURIComponent(cfg.user);
+    const auth = "Basic " + btoa(cfg.user + ":" + cfg.pass);
+    let narosla = "";
+    for (const seg of segmentySciezki(cfg, autor)) narosla += "/" + encodeURIComponent(seg);
+    const resp = await fetch(baza + narosla + "/" + encodeURIComponent(nazwa),
+      { headers: { Authorization: auth } });
+    if (resp.status === 404) throw new Error("brak backupu w Nextcloud");
+    if (!resp.ok) throw new Error("Nextcloud: HTTP " + resp.status);
+    return await resp.text();
+  }
+
+  async function pcloudGet(cfg, nazwa) {
+    const host = cfg.host || "api.pcloud.com";
+    const autor = await sciezkaAutor();
+    const pelna = "/" + ((cfg.path || "/Taksator") + "/" + autor + "/" + nazwa)
+      .split("/").filter(Boolean).join("/");
+    const rs = await fetch("https://" + host + "/stat?auth=" + encodeURIComponent(cfg.token) +
+      "&path=" + encodeURIComponent(pelna));
+    const meta = await rs.json().catch(() => ({}));
+    const fid = meta.fileid || (meta.metadata && meta.metadata.fileid);
+    if (meta.result !== 0 || !fid) throw new Error("brak backupu w pCloud");
+    const rl = await fetch("https://" + host + "/getfilelink?auth=" + encodeURIComponent(cfg.token) +
+      "&fileid=" + encodeURIComponent(fid));
+    const link = await rl.json().catch(() => ({}));
+    if (link.result !== 0 || !link.hosts || !link.hosts.length || !link.path)
+      throw new Error("pCloud: nie mogę pobrać pliku backupu");
+    const resp = await fetch("https://" + link.hosts[0] + link.path);
+    if (!resp.ok) throw new Error("pCloud: HTTP " + resp.status);
+    return await resp.text();
+  }
+
+  async function gdriveGet(cfg, nazwa) {
+    const token = await gdriveToken(cfg);
+    const nazwaFolderu = (cfg.folder || "FORESTLY GO").trim();
+    const idGlownego = await gdriveFolderId(token, nazwaFolderu);
+    const autor = await sciezkaAutor();
+    const idAutora = (autor && autor !== "nieznany") ? await gdriveFolderId(token, autor, idGlownego) : idGlownego;
+    const qs = "name='" + String(nazwa).replace(/'/g, "\\'") +
+      "' and trashed=false and '" + idAutora + "' in parents";
+    const sz = await fetch("https://www.googleapis.com/drive/v3/files?q=" + encodeURIComponent(qs) +
+      "&fields=files(id)&pageSize=2&supportsAllDrives=true&includeItemsFromDrives=true",
+      { headers: { Authorization: "Bearer " + token } });
+    if (!sz.ok) throw new Error("Dysk Google: nie mogę szukać backupu");
+    const plik = (((await sz.json()).files) || [])[0];
+    if (!plik) throw new Error("brak backupu na Dysku Google");
+    const resp = await fetch("https://www.googleapis.com/drive/v3/files/" + plik.id +
+      "?alt=media&supportsAllDrives=true", { headers: { Authorization: "Bearer " + token } });
+    if (!resp.ok) throw new Error("Dysk Google: HTTP " + resp.status);
+    return await resp.text();
+  }
+
+  /* Szuka backupu sesji we wszystkich skonfigurowanych chmurach.
+     Zwraca { ok: true, dane, chmura } albo { ok: false, powod }. */
+  async function pobierzBackup() {
+    const [nc, pc, gd] = await Promise.all([
+      DB.metaGet("nextcloud"), DB.metaGet("pcloud"), DB.metaGet("gdrive")
+    ]);
+    const proby = [];
+    if (nc && nc.url && nc.user && nc.pass) proby.push(["nextcloud", nextcloudGet(nc, NAZWA_BACKUPU)]);
+    if (pc && pc.token) proby.push(["pcloud", pcloudGet(pc, NAZWA_BACKUPU)]);
+    if (gd && gd.refreshToken) proby.push(["gdrive", gdriveGet(gd, NAZWA_BACKUPU)]);
+    if (!proby.length) return { ok: false, powod: "brak skonfigurowanych chmur — dodaj je w zakładce Sync" };
+    const dlaczego = [];
+    for (const [chmura, proba] of proby) {
+      try {
+        const tekst = await proba;
+        const dane = JSON.parse(tekst);
+        if (!dane || !Array.isArray(dane.wpisy) || !dane.autor) throw new Error("uszkodzony plik backupu");
+        return { ok: true, dane, chmura };
+      } catch (e) { dlaczego.push(chmura + ": " + (e && e.message || e)); }
+    }
+    return { ok: false, powod: "nie znalazłem backupu sesji (" + dlaczego.join("; ") + ")" };
   }
 
   /* Pełny cykl: zbierz wpisy wsi → zbuduj XLSX → wyślij → oznacz wpisy */
@@ -470,6 +562,7 @@ const CLOUDS = (() => {
   return {
     nextcloudTest, pcloudTest, gdriveTest, pcloudZaloguj,
     gdriveLoginUrl, gdriveDolaczKod,
-    wyslijPlik, synchronizujWies, kolejkaInfo, log
+    wyslijPlik, synchronizujWies, kolejkaInfo, log,
+    wyslijBackup, pobierzBackup
   };
 })();

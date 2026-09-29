@@ -1131,6 +1131,7 @@ $("#btn-nc-save").addEventListener("click", async () => {
   toast("Nextcloud zapisany"); CLOUDS.log("<b>zapisano</b> konfigurację Nextcloud" +
     ($("#nc-path").value.trim() ? " — folder: " + $("#nc-path").value.trim() : ""));
   rysujSync(); resetujStatusPolaczenia();
+  sprobujBackupZChmury();
 });
 $("#btn-pc-zaloguj").addEventListener("click", async () => {
   try {
@@ -1144,6 +1145,7 @@ $("#btn-pc-zaloguj").addEventListener("click", async () => {
     CLOUDS.log("<b>zalogowano</b> do pCloud — " + r.email +
       ", folder: " + ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
     rysujSync(); resetujStatusPolaczenia();
+    sprobujBackupZChmury();
   } catch (e) {
     toast(String(e.message || e), e.potrzebujeKodu ? 9000 : undefined);
     /* pCloud pyta o kod weryfikacyjny — nasuwamy pole i podświetlamy */
@@ -1165,6 +1167,7 @@ $("#btn-pc-save").addEventListener("click", async () => {
   toast("Folder zapisany"); CLOUDS.log("<b>zapisano</b> folder pCloud: " +
     ($("#pc-path").value.trim() || "/FORESTLY BAZA"));
   rysujSync(); resetujStatusPolaczenia();
+  sprobujBackupZChmury();
 });
 /* Dysk Google: logowanie kontem użytkownika (OAuth + PKCE) */
 /* Identyfikator klienta aplikacji ForestlyGO w Google Cloud — wpisany na stałe,
@@ -1210,6 +1213,7 @@ async function gdPolaczKod(kod) {
       toast("Dysk Google: zalogowany ✓ — folder: " + t.folder);
       CLOUDS.log("<b>Dysk Google OK</b> — folder: " + t.folder);
     } catch (e) { toast("Połączono, ale test: " + e.message); }
+    sprobujBackupZChmury();
     return true;
   } catch (e) { toast(e.message); CLOUDS.log("Google błąd: " + e.message); return false; }
 }
@@ -1270,6 +1274,90 @@ $("#btn-backup-plik").addEventListener("click", async () => {
   const ok = await SESJA.pobierz();
   if (!ok) toast("Najpierw podaj leśnika (kreator)");
 });
+/* ---------- v1.0.63: backup sesji w chmurze + przekazanie dalej ---------- */
+async function przywrocZChmury() {
+  toast("Szukam backupu w chmurze…");
+  try {
+    const r = await CLOUDS.pobierzBackup();
+    if (!r.ok) { toast(r.powod); return null; }
+    const w = await SESJA.wprowadzDane(r.dane);
+    toast("Sesja przywrócona z chmury: " + w.ile + " wpisów ✓ (jako " + w.autor + ")");
+    CLOUDS.log("<b>przywrócono sesję z " + r.chmura + "</b> — " + w.ile + " wpisów, autor: " + w.autor);
+    rysujWykaz(); odswiezAppbar(); odswiezBackupKarte();
+    return w;
+  } catch (e) { toast("Pobieranie backupu: " + (e && e.message || e)); return null; }
+}
+$("#btn-backup-chmura").addEventListener("click", async () => {
+  try {
+    const r = await SESJA.wyslijDoChmury();
+    if (r.ok) {
+      toast("Backup wysłany do chmury ✓ (" + r.ile + " wpisów)");
+      CLOUDS.log("<b>backup sesji</b> → chmura — " + r.ile + " wpisów");
+      odswiezBackupKarte();
+    } else toast(r.powod || "Nie udało się wysłać backupu");
+  } catch (e) { toast("Backup do chmury: " + (e && e.message || e)); }
+});
+$("#btn-backup-z-chmury").addEventListener("click", () => { przywrocZChmury(); });
+/* „Przekaż dalej”: plik backupu przez udostępnienie (WhatsApp/Bluetooth/pendrive) */
+$("#btn-przekaz").addEventListener("click", async () => {
+  const blob = await SESJA.blobSesji();
+  if (!blob) { toast("Najpierw podaj leśnika (kreator)"); return; }
+  const autor = (await DB.metaGet("autor")) || "lesnik";
+  const plik = new File([blob], "ForestlyGO_sesja_" + autor.replace(/[\\/:*?"<>|]/g, "_") + ".json",
+    { type: "application/json" });
+  if (navigator.canShare && navigator.canShare({ files: [plik] })) {
+    try {
+      await navigator.share({ files: [plik], title: "FORESTLY GO — backup sesji" });
+      CLOUDS.log("<b>przekazano sesję dalej</b> (" + blob.size + " B)");
+      return;
+    } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  const ok = await SESJA.pobierz();
+  if (ok) toast("Backup zapisany jako plik — prześlij go drugiemu leśnikowi");
+});
+/* okno „w chmurze jest backup sesji” */
+(function bindOknaBackup() {
+  const okno = document.getElementById("okno-backup-chmura");
+  if (!okno) return;
+  const zamknij = () => okno.classList.remove("on");
+  const b = id => document.getElementById(id);
+  if (b("bc-zamknij")) b("bc-zamknij").addEventListener("click", zamknij);
+  if (b("bc-pomin")) b("bc-pomin").addEventListener("click", zamknij);
+  if (b("bc-pobierz")) b("bc-pobierz").addEventListener("click", async () => {
+    zamknij();
+    const w = await przywrocZChmury();
+    if (w) await odswiezStart();
+  });
+  okno.addEventListener("click", e => { if (e.target === okno) zamknij(); });
+})();
+/* raz na sesję: leśnik wpisany, nie ma żadnych wpisów, a w chmurze leży
+   backup — proponujemy pobranie (scenariusz: przejęcie pracy po kimś,
+   nowy telefon, reinstalacja). Wywoływane po starcie i po skonfigurowaniu
+   chmury, żeby nie przegapić momentu. */
+let backupChmuraSprawdzono = false;
+async function sprobujBackupZChmury() {
+  if (backupChmuraSprawdzono) return;
+  const autor = await DB.metaGet("autor");
+  if (!autor) return;
+  const wpisy = await DB.wpisyAll();
+  if (wpisy.length) return;   /* mamy własne dane — automatycznie nie mieszamy */
+  const [pc, gd, nc] = await Promise.all(
+    [DB.metaGet("pcloud"), DB.metaGet("gdrive"), DB.metaGet("nextcloud")]);
+  if (!((pc && pc.token) || (gd && gd.refreshToken) || (nc && nc.url))) return;
+  backupChmuraSprawdzono = true;
+  try {
+    const r = await CLOUDS.pobierzBackup();
+    if (!r.ok) return;
+    const d = r.dane;
+    const kiedy = String(d.zapisano || "").slice(0, 16).replace("T", " ");
+    const tresc = document.getElementById("bc-tresc");
+    if (tresc) tresc.innerHTML = "W chmurze (" + r.chmura + ") jest backup sesji leśnika " +
+      "<b>" + d.autor + "</b>: <b>" + (d.wpisy || []).length + "</b> wpisów, zapisany " + kiedy +
+      ".<br>Pobrać i pracować dalej jako <b>" + d.autor + "</b>?";
+    const okno = document.getElementById("okno-backup-chmura");
+    if (okno) okno.classList.add("on");
+  } catch (e) { /* chmura nieosiągalna — cicho, można pobrać przyciskiem */ }
+}
 /* jedno przywracanie: na komputerze wskazujesz folder, na telefonie
    od razu plik backupu (Android nie umie wskazywać folderów) */
 $("#btn-backup-przywroc").addEventListener("click", async () => {
@@ -1357,6 +1445,10 @@ async function wyslijWies(wies, cicho) {
     bledy.forEach(([k, v]) => CLOUDS.log("⚠ " + k + ": " + v));
     toast(ok ? "Wysłano ✓ (" + ok + " chmur" + (ok > 1 ? "y" : "") + ", " + r.ile + " wpisów)" : "Błąd wysyłki — szczegóły w dzienniku");
     SESJA.zapiszZLogiem();
+    /* v1.0.63: przy okazji odświeżamy backup całej sesji w chmurze */
+    SESJA.wyslijDoChmury().then(b => {
+      if (b && b.ok) CLOUDS.log("<b>backup sesji w chmurze</b> odświeżony (" + b.ile + " wpisów)");
+    }).catch(() => {});
   } catch (e) {
     CLOUDS.log("⚠ wysyłka nieudana: " + e.message);
     toast("Wysyłka nie udała się: " + e.message);
@@ -1410,6 +1502,7 @@ async function autoWysylkaStart() {
       STATUS_POLACZENIA = true;
       toast("Auto-wysyłka: " + (ok === 1 ? "1 wieś" : ok + " wsi") + " wysłane ✓", 5000);
       SESJA.zapiszZLogiem();
+      SESJA.wyslijDoChmury().catch(() => {});   /* v1.0.63: backup sesji w chmurze */
       powiadomAndroid("Forestly GO — wysłano", "Opisy poszły do chmury: " + wyslaneWsie.join(", ") + ".");
     }
     if (ok || nie) { rysujWykaz(); rysujPulpitWsi(); }
@@ -1698,6 +1791,7 @@ async function start() {
   }
   bindOnbKeys();
   odswiezAppbar(); rysuj(); rysujWykaz(); wczytajKonfigChmur(); sprawdzAktualizacjeApk();
+  setTimeout(sprobujBackupZChmury, 3000);
   setTimeout(() => {
   if (!("serviceWorker" in navigator) || czyNatywnie()) return;
     // przeładuj od razu, gdy NOWA wersja aplikacji przejmuje kontrolę

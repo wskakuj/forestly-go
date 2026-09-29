@@ -168,5 +168,26 @@ const SESJA = (() => {
     return r;
   }
 
-  return { zapisz, zapiszZLogiem, odczytaj, odczytajOpfs, pobierz, przywroc, przywrocZPliku, PREFIKS };
+  /* v1.0.63: backup sesji w chmurze — jeden plik JSON w folderze autora
+     (FORESTLY GO/<leśnik>/backup_sesji.json), nadpisywany przy każdej
+     wysyłce. Bez haseł — po przywróceniu chmury konfiguruje się od nowa. */
+  async function wyslijDoChmury() {
+    const dane = await zbudujDane();
+    if (!dane.autor) return { ok: false, powod: "najpierw podaj leśnika (kreator)" };
+    if (!(dane.wpisy || []).length) return { ok: false, powod: "brak wpisów do backupu" };
+    const blob = new Blob([JSON.stringify(dane, null, 1)], { type: "application/json" });
+    const raport = await CLOUDS.wyslijBackup(blob);
+    const ok = Object.values(raport || {}).some(v => v === "ok");
+    return { ok, raport, ile: dane.wpisy.length };
+  }
+
+  /* v1.0.63: plik backupu do udostępnienia („Przekaż dalej”) */
+  async function blobSesji() {
+    const dane = await zbudujDane();
+    if (!dane.autor) return null;
+    return new Blob([JSON.stringify(dane, null, 1)], { type: "application/json" });
+  }
+
+  return { zapisz, zapiszZLogiem, odczytaj, odczytajOpfs, pobierz, przywroc, przywrocZPliku,
+    wyslijDoChmury, blobSesji, wprowadzDane, PREFIKS };
 })();
