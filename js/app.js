@@ -57,8 +57,9 @@ function przelaczTab(nazwa) {
 /* ---------- pulpit wsi ---------- */
 let aktywnaWies = localStorage.getItem("aktywnaWies") || "";
 async function rysujPulpitWsi() {
-  const wsie = await DB.wpisyWsie();
-  const wszystkie = await DB.wpisyAll();
+  const wszystkieRaw = await DB.wpisyAll();
+  const wszystkie = wszystkieRaw.filter(x => !x.usuniety);   /* usunięte nie liczą się na pulpicie */
+  const wsie = [...new Set(wszystkie.map(x => x.wies).filter(Boolean))];
   const box = $("#wies-grid");
   const nieslane = wszystkie.filter(x => x.status !== "wyslany").length;
   const baner = nieslane ? `<div class="auto-wysylka-baner">⬆ Do wysłania: <b>${nieslane}</b> ` +
@@ -71,7 +72,7 @@ async function rysujPulpitWsi() {
   const dzisWpisy = wszystkie.filter(x => (x.timestamp || "").slice(0, 10) === dzis);
   const dzisWsie = new Set(dzisWpisy.map(x => x.wies)).size;
   const odmOpis = n => n === 1 ? "opis" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "opisy" : "opisów");
-  const statystyka = dzisWpisy.length ? `<div class="pulpit-dzis">📅 Dziś: <b>${dzisWpisy.length}</b> ${odmOpis(dzisWpisy.length)} · ${dzisWsie} ${dzisWsie === 1 ? "wieś" : "wsi"}</div>` : "";
+  const statystyka = dzisWpisy.length ? `<div class="pulpit-dzis">📅 <b>Dziś</b><br>opisy: <b>${dzisWpisy.length}</b><br>wsi: <b>${dzisWsie}</b></div>` : "";
   /* karty wsi posortowane po ostatniej aktywności (v1.0.58) */
   const ostatnio = new Map(wsie.map(w => [w, Math.max(0, ...wszystkie
     .filter(x => x.wies === w).map(x => new Date(x.timestamp || 0).getTime() || 0))]));
@@ -652,7 +653,7 @@ async function odswiezPinezki() {
   if (!mapa) return;
   if (warstwaWpisow) mapa.removeLayer(warstwaWpisow);
   warstwaWpisow = L.layerGroup().addTo(mapa);
-  const wszystkie = (await DB.wpisyAll()).filter(w => w.lat != null && w.lon != null);
+  const wszystkie = (await DB.wpisyAll()).filter(w => w.lat != null && w.lon != null && !w.usuniety);
   /* zielone pole wsi — okrąg obejmujący wszystkie jej pinezki, z nazwą */
   const grupy = {};
   for (const w of wszystkie) {
@@ -807,7 +808,7 @@ function identyfikatorWpisu(x) {
 }
 async function rysujWykaz() {
   const wsie = await DB.wpisyWsie();
-  const wszystkie = await DB.wpisyAll();
+  const wszystkie = (await DB.wpisyAll()).filter(x => !x.usuniety);   /* usuniętych nie pokazujemy */
   const box = $("#wykaz-lista");
   /* szukajka: filtr po numerze wydzielenia, wsi i opisie drzewostanu */
   const szEl = document.getElementById("wykaz-szukaj");
@@ -853,12 +854,7 @@ $("#wykaz-lista").addEventListener("click", async e => {
     /* potwierdzenie (v1.0.58); gdy okna nie ma (miks starych plików po
        aktualizacji w tle) — kasujemy od razu, jak kiedyś */
     const okno = document.getElementById("okno-usun");
-    if (!okno) {
-      await DB.wpisyDelete(del.dataset.del);
-      SESJA.zapiszZLogiem();
-      rysujWykaz(); toast("Wpis usunięty");
-      return;
-    }
+    if (!okno) { await oznaczUsuniety(w.id); toast("Wpis usunięty"); return; }
     window.__doUsuniecia = w.id;
     const tresc = document.getElementById("usun-tresc");
     if (tresc) tresc.textContent = identyfikatorWpisu(w) + " — " +
@@ -1015,7 +1011,7 @@ async function rysujSync() {
     '<div class="chm-w">' + (pcC.token ? '<span class="chm-tak">✓</span>' : '<span class="chm-nie">✗</span>') + ' pCloud</div>' +
     '<div class="chm-w">' + (gdC.refreshToken ? '<span class="chm-tak">✓</span>' : '<span class="chm-nie">✗</span>') + ' Dysk Google</div>';
   $("#s-pliki").innerHTML = wsie.length ? wsie.map(w => {
-    const ile = wszystkie.filter(x => x.wies === w).length;
+    const ile = wszystkie.filter(x => x.wies === w && !x.usuniety).length;   /* usuniętych nie liczmy */
     const nazwa = XLSXIO.nazwaPliku(w, autor || "x");
     return `<div class="s-plik">
       <div class="ri-main"><b>${nazwa}</b><small>${ile} wpisów</small></div>
@@ -1394,10 +1390,8 @@ setInterval(() => { if (!autoWysylkaTimer && !autoWysylkaTrwa) zaplanujAutoWysyl
   if (b("usun-potwierdz")) b("usun-potwierdz").addEventListener("click", async () => {
     const id = window.__doUsuniecia; zamknij(); window.__doUsuniecia = null;
     if (!id) return;
-    await DB.wpisyDelete(id);
-    SESJA.zapiszZLogiem();
-    rysujWykaz(); rysujPulpitWsi();
-    toast("Wpis usunięty");
+    await oznaczUsuniety(id);
+    toast("Wpis usunięty — w Excelu dostanie dopisek „USUNIĘTY”");
   });
   okno.addEventListener("click", e => { if (e.target === okno) zamknij(); });
 })();
@@ -1431,6 +1425,21 @@ async function mozePrzywrocSzkic() {
     "(zapisany w szkicu " + kiedy + ")\n\nPrzywrócić go do formularza?");
   if (chce) { trybEdycji = null; stan = st; uzupelnijForm(); rysuj(); przelaczTab("form"); }
   else localStorage.removeItem(SZKIC);
+}
+/* v1.0.60: usunięcie wpisu = nagrobek. Wpis znika z aplikacji, ale
+   zostaje w bazie (status „usuniety”, znacznik kiedy). Przy wysyłce
+   wsi ląduje w Excelu w chmurze z dopiskiem „USUNIĘTY <data>” w
+   kolumnie „usuniety” — i dopiero po tej wysyłce ma spokój. */
+async function oznaczUsuniety(id) {
+  const w = (await DB.wpisyAll()).find(x => x.id === id);
+  if (!w) return;
+  w.status = "usuniety";
+  w.usuniety = new Date().toISOString();
+  await DB.wpisyPut(w);
+  SESJA.zapiszZLogiem();
+  CLOUDS.log("<b>usunięto wpis</b> " + oddzPelne(w) + " (" + w.wies + ") — " +
+    "w Excelu dostanie dopisek „USUNIĘTY” przy najbliższej wysyłce");
+  rysujWykaz(); rysujPulpitWsi();
 }
 /* powiadomienie systemowe Androida (v1.0.58) — działa w APK (wtyczka
    LocalNotifications z Capacitora); w przeglądarce/PWA pomijamy */

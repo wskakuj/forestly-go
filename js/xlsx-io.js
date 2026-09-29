@@ -34,7 +34,10 @@ const XLSXIO = (() => {
     ["wsk_miaz_m3", w => w.wskMiaz || ""],
     ["opis_gotowy", w => OPTAX.linie(w).join("\n")],
     ["timestamp", w => w.timestamp || ""],
-    ["wersja", w => w.wersja || 1]
+    ["wersja", w => w.wersja || 1],
+    /* v1.0.60: wpisy usunięte w aplikacji zostają w Excelu (w chmurze)
+       z dopiskiem, kiedy je usunięto — historia się nie gubi */
+    ["usuniety", w => w.usuniety ? "USUNIĘTY " + String(w.usuniety).slice(0, 10) : ""]
   ];
 
   function nazwaPliku(wies, autor) {
