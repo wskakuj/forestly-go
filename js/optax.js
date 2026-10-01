@@ -2,7 +2,9 @@
    Z obiektu 'wpis' składamy wieloliniowy opis jak w pliku OPTAX. */
 
 const OPTAX = (() => {
-  const KROK = 5; // połowa przedziału wieku
+  function krok(wiek) {
+    return wiek <= 40 ? 2 : 5;
+  }
 
   function klasaWieku(wiek) {
     // klasa I = 1–20 l, II = 21–40 l, ... (zaokrąglone w dół do pełnych 20)
@@ -24,11 +26,15 @@ const OPTAX = (() => {
     const out = [];
     const s = (w.siedlisko === "OJ" ? "OlJ" : w.siedlisko) || "—";
     out.push(s + "  " + (sklad(w) || "—"));
-    if (w.panujacy)
-      out.push(w.panujacy + "/" + (w.wiekPrzec - KROK) + "-" + (w.wiekPrzec + KROK) + "/" + w.wiekPrzec + "l");
-    if (w.pjd && w.pjd.length)
-      out.push("pjd." + w.pjd.join(", ") + "/" + (w.pjdWiekPrzec - KROK) + "-" +
-        (w.pjdWiekPrzec + KROK) + "/" + w.pjdWiekPrzec + "l");
+    if (w.panujacy) {
+      const k = krok(w.wiekPrzec);
+      out.push(w.panujacy + "/" + (w.wiekPrzec - k) + "-" + (w.wiekPrzec + k) + "/" + w.wiekPrzec + "l");
+    }
+    if (w.pjd && w.pjd.length) {
+      const kp = krok(w.pjdWiekPrzec);
+      out.push("pjd." + w.pjd.join(", ") + "/" + (w.pjdWiekPrzec - kp) + "-" +
+        (w.pjdWiekPrzec + kp) + "/" + w.pjdWiekPrzec + "l");
+    }
     if (w.zwarcie) out.push("zw. " + w.zwarcie);
     /* podszyt uwzględniamy gdy wskazano gatunki LUB samo pokrycie */
     if ((w.podsz && w.podsz.length) || (w.podszProc || 0) > 0) {
@@ -44,5 +50,5 @@ const OPTAX = (() => {
   /* jedna linia (do podglądu skróconego / wykazu) */
   function jednaLinia(w) { return linie(w).join(" "); }
 
-  return { KROK, klasaWieku, sklad, linie, jednaLinia };
+  return { krok, klasaWieku, sklad, linie, jednaLinia };
 })();

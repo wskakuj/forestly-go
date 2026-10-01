@@ -46,7 +46,11 @@ function toast(msg, ms) {
   clearTimeout(t._tm); t._tm = setTimeout(() => t.classList.remove("on"), ms || 2600);
 }
 function przelaczTab(nazwa) {
-  document.querySelectorAll(".bn").forEach(b => b.classList.toggle("on", b.dataset.tab === nazwa));
+  document.querySelectorAll(".bn").forEach(b => {
+    // specjalny przypadek dla "wsie", bo przycisk w nawigacji ma data-tab="wsie", 
+    // ale idzie to też w parze z ID "bn-wies" na samym przycisku, upewnijmy się, że dobrze go "łapie"
+    b.classList.toggle("on", b.dataset.tab === nazwa || (nazwa === "wsie" && b.id === "bn-wies"));
+  });
   document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "pane-" + nazwa));
   if (nazwa === "mapa") setTimeout(() => { satInit(); odswiezPinezki(); }, 60);
   if (nazwa === "wykaz") rysujWykaz();
@@ -448,9 +452,11 @@ function odswiezPasekZapisu() {
   }
 }
 function rysuj() {
-  $("#wiek-linia").textContent = (stan.wiekPrzec - OPTAX.KROK) + "–" + (stan.wiekPrzec + OPTAX.KROK) + " / " + stan.wiekPrzec + " l";
+  const kPan = OPTAX.krok(stan.wiekPrzec);
+  $("#wiek-linia").textContent = (stan.wiekPrzec - kPan) + "–" + (stan.wiekPrzec + kPan) + " / " + stan.wiekPrzec + " l";
   $("#wiek-klasa").textContent = "klasa wieku " + OPTAX.klasaWieku(stan.wiekPrzec);
-  $("#pjd-wiek-linia").textContent = (stan.pjdWiekPrzec - OPTAX.KROK) + "–" + (stan.pjdWiekPrzec + OPTAX.KROK) + " / " + stan.pjdWiekPrzec + " l";
+  const kPjd = OPTAX.krok(stan.pjdWiekPrzec);
+  $("#pjd-wiek-linia").textContent = (stan.pjdWiekPrzec - kPjd) + "–" + (stan.pjdWiekPrzec + kPjd) + " / " + stan.pjdWiekPrzec + " l";
   $("#podsz-proc").textContent = stan.podszProc + "%";
   $("#e-kl").textContent = "kl. " + OPTAX.klasaWieku(stan.wiekPrzec);
   $("#udzial-pan-linia").textContent = stan.panujacy
