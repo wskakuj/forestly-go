@@ -15,11 +15,39 @@ const SLOWNIKI = {
               "czeremcha", "grusza", "jabłoń", "klon", "lipa", "wierzba"]
 };
 const GRUPY_POJEDYNCZE = new Set(["siedlisko", "panujacy", "drugi", "zwarcie"]);
+
+/* FORESTLY_GO_AUTOFILL_V2 — mapy do autouzupełniania (łatwe do zmiany) */
+/* zadrzewienie [%] ze zwarcia — wartości orientacyjne, można dowolnie poprawić */
+const ZADRZEW_ZWARCIE = { "pełne": 100, "duże": 90, "umiark.": 70, "przeryw.": 50, "rzadkie": 30, "luźne": 20 };
+/* podpowiedzi wskazań (datalist) — najpierw pasujące do wieku, potem reszta słownika */
+const WSKAZA_KODY = ["CP", "CP w 2naw.", "CP z m3", "CS", "CW", "Dol.", "Inne", "Magr.oczyś", "Magr.wyrów",
+  "Mel.agr.", "Mel.wodne", "Naw.", "Oczyścić", "Odn.", "Piel.", "Piel.p.poz", "Pods.", "Popr.", "Pozostawić",
+  "Przeklas.", "Rb I", "Rb II", "Rb III", "Rb IV", "TP", "TW", "TW w 2naw.", "Uprzątnąc", "Us.nas.",
+  "Us.przedr.", "Us.przest.", "Uzup.", "Wpr.podsz.", "Wyrównać", "Zalesić", "16Xdo29II", "do5l po Rb",
+  "drz.dziupl", "Nat.2000", "O.chr.kr.", "Wykonyw.", "Wykonać", "uprz.płaz"];
+const WSKAZA_WIEK = [
+  { do: 10,   kody: ["Piel.", "Popr.", "CW", "Oczyścić", "Uzup."] },
+  { do: 20,   kody: ["CW", "CP", "Piel.", "Uzup.", "Mel.agr."] },
+  { do: 40,   kody: ["CP", "TW", "Piel.p.poz"] },
+  { do: 60,   kody: ["TW", "TP"] },
+  { do: 80,   kody: ["TP"] },
+  { do: 100,  kody: ["TP", "Rb III"] },
+  { do: 9999, kody: ["Rb I", "Rb II", "Rb III", "Rb IV"] }
+];
+/* siedliska bagienne/mokre — dorzucamy meliorację wodną do podpowiedzi */
+const SIEDL_MOKRE = new Set(["Lł", "Ol", "OlJ"]);
 const GRUPY_WIELOKROTNE = new Set(["pjd", "podsz"]);
 
 /* ---------- stan formularza ---------- */
 let stan = nowyStan();
 let trybEdycji = null; // id wpisu, który edytujemy
+
+/* ---------- autouzupełnianie (FORESTLY_GO_AUTOFILL_V2) ----------
+   autoVals: ostatnie wartości wpisane automatycznie (tylko je odświeżamy).
+   reczne:   pola wpisane ręcznie — nie ruszamy ich.
+   Zerowane przy każdym nowym/ładowanym wpisie (uzupelnijForm). */
+let autoVals = {};
+let reczne = {};
 
 function oddzPelne(w) {
   w = w || stan;
@@ -344,6 +372,10 @@ function renderChips() {
       `<span class="chip ${jestAktywny(g, v) ? "on" : ""}" data-v="${v}">${v}</span>`).join("");
   });
 }
+/* udział panującego dociągany z udziału drugiego gatunku (skład sumuje się do 10) */
+function zsynchronizujUdzial() {
+  stan.udzialPanujacy = Math.max(0, Math.min(10, 10 - (stan.udzialDrugi || 0)));
+}
 function jestAktywny(g, v) {
   if (GRUPY_POJEDYNCZE.has(g)) return stan[g] === v;
   return stan[g].includes(v);
@@ -356,6 +388,7 @@ document.addEventListener("click", e => {
   if (GRUPY_POJEDYNCZE.has(g)) {
     stan[g] = stan[g] === v ? null : v;
     if (g === "drugi" && !stan.drugi) stan.udzialDrugi = 0;
+    if (g === "drugi") zsynchronizujUdzial();
   } else {
     const i = stan[g].indexOf(v);
     if (i >= 0) stan[g].splice(i, 1); else stan[g].push(v);
@@ -370,7 +403,7 @@ document.addEventListener("click", e => {
   const krok = parseInt(b.dataset.dir, 10);
   switch (b.dataset.step) {
     case "udzialpan": stan.udzialPanujacy = Math.min(10, Math.max(0, udzialPan(stan) + krok)); break;
-    case "udzial": stan.udzialDrugi = Math.min(10, Math.max(0, stan.udzialDrugi + krok)); break;
+    case "udzial": stan.udzialDrugi = Math.min(10, Math.max(0, stan.udzialDrugi + krok)); zsynchronizujUdzial(); break;
     case "wiek": stan.wiekPrzec = Math.max(10, stan.wiekPrzec + krok); break;
     case "pjdwiek": stan.pjdWiekPrzec = Math.max(10, stan.pjdWiekPrzec + krok); break;
     case "podszproc": stan.podszProc = Math.min(100, Math.max(0, stan.podszProc + krok)); break;
@@ -451,7 +484,55 @@ function odswiezPasekZapisu() {
     postep.title = "kompletność opisu: " + ile + " / 7";
   }
 }
+/* FORESTLY_GO_AUTOFILL_V2 — pola, które same się wypełniają.
+   Zasada dla każdego pola: ustawiamy je, gdy jest puste albo gdy zawiera naszą
+   poprzednią wartość automatyczną. Wartości wpisanej ręcznie ani wczytanej
+   z pliku NIE nadpisujemy. */
+function autoUstaw(klucz, val, sel) {
+  if (reczne[klucz]) return;
+  const teraz = String(stan[klucz] == null ? "" : stan[klucz]).trim();
+  const nowe = String(val);
+  if (teraz && teraz !== autoVals[klucz]) return;   // wpis ręczny / z pliku — zostaw
+  if (teraz !== nowe) { stan[klucz] = nowe; const e = $(sel); if (e) e.value = nowe; }
+  autoVals[klucz] = nowe;
+}
+
+function autoUzupelnij() {
+  /* 1. bonitacja i miąższość z tablicy SBONITA (gatunek panujący + wiek + wysokość) */
+  if (typeof BONITACJA !== "undefined" && BONITACJA) {
+    const res = BONITACJA.dla(stan.panujacy, stan.wiekPrzec, stan.elWys);
+    if (res) {
+      if (res.bonit) autoUstaw("elBon", res.bonit, "#e-bon");
+      if (res.miaz != null) autoUstaw("elMiaz", res.miaz, "#e-miaz");
+    }
+  }
+  /* 2. zadrzewienie ze zwarcia */
+  const zz = ZADRZEW_ZWARCIE[stan.zwarcie];
+  if (zz != null) autoUstaw("elZad", zz, "#e-zad");
+  /* 3. miąższość wskazania = miąższość [m³/ha] × powierzchnia wskazania [ha] */
+  const mm = parseFloat(String(stan.elMiaz || "").replace(",", "."));
+  const pw = parseFloat(String(stan.wskPow || "").replace(",", "."));
+  if (isFinite(mm) && isFinite(pw) && pw > 0) autoUstaw("wskMiaz", Math.round(mm * pw * 10) / 10, "#w-miaz");
+}
+
+/* podpowiedzi wskazań: pasujące do wieku na początku, potem reszta słownika */
+function wypelnijWskazania() {
+  const dl = $("#dl-wsk"); if (!dl) return;
+  const w = stan.wiekPrzec || 0;
+  let biezace = null;
+  for (const g of WSKAZA_WIEK) { if (w <= g.do) { biezace = g.kody.slice(); break; } }
+  const zestaw = biezace || [];
+  if (SIEDL_MOKRE.has(stan.siedlisko) && !zestaw.includes("Mel.wodne")) zestaw.push("Mel.wodne");
+  WSKAZA_KODY.forEach(k => { if (!zestaw.includes(k)) zestaw.push(k); });
+  const klucz = w + "|" + stan.siedlisko + "|" + zestaw.join(",");
+  if (dl.dataset.klucz === klucz) return;
+  dl.dataset.klucz = klucz;
+  dl.innerHTML = zestaw.map(k => '<option value="' + k + '"></option>').join("");
+}
+
 function rysuj() {
+  autoUzupelnij();
+  wypelnijWskazania();
   const kPan = OPTAX.krok(stan.wiekPrzec);
   $("#wiek-linia").textContent = (stan.wiekPrzec - kPan) + "–" + (stan.wiekPrzec + kPan) + " / " + stan.wiekPrzec + " l";
   $("#wiek-klasa").textContent = "klasa wieku " + OPTAX.klasaWieku(stan.wiekPrzec);
@@ -519,6 +600,11 @@ document.addEventListener("click", e => {
 /* numer wydzielenia: akceptuje się dopiero, gdy dotkniesz czegokolwiek
    innego (przejście do kolejnego pola, zapis itd.) — bez Enter */
 $("#in-dzialka").addEventListener("blur", () => dzialkiDodaj(false));
+/* flagi muszą być podpięte PRZED bindInput — inaczej rysuj() nadpisałby wpis ręczny */
+/* flaga = "pole ma treść" — wyczyszczenie pola włącza autouzupełnianie z powrotem */
+[["#e-bon", "elBon"], ["#e-miaz", "elMiaz"], ["#e-zad", "elZad"], ["#w-miaz", "wskMiaz"]]
+  .forEach(([sel, klucz]) => $(sel).addEventListener("input",
+    e => { reczne[klucz] = String(e.target.value || "").trim() !== ""; }));
 bindInput("#e-wys", "elWys");
 bindInput("#e-pier", "elPier");
 bindInput("#e-bon", "elBon");
@@ -838,6 +924,7 @@ if (document.getElementById("okno-braki")) {
 $("#btn-zapisz").addEventListener("click", () => zapiszWpis(false));
 
 function uzupelnijForm() {
+  autoVals = {}; reczne = {}; // nowy/ładowany wpis — autouzupełnianie od zera
   if (stan.siedlisko === "OJ") stan.siedlisko = "OlJ"; // stare wpisy
   $("#in-wies").value = stan.wies || "";
   if (typeof stan.dzialki === "string")

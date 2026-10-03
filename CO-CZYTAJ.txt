@@ -1,23 +1,19 @@
-FORESTLY GO v1.0.61 — aktualizacje przy każdym otwarciu + krótszy opis backupu
-=============================================================================
+FORESTLY GO v1.1.0 — autouzupełnianie danych
+============================================
 
 CO NOWEGO
-  1. SPRAWDZANIE AKTUALIZACJI PRZY KAŻDYM OTWARCIU APLIKACJI
-     Dotąd aplikacja pytała GitHub o nowszą wersję najwyżej raz na 6
-     godzin. Teraz pyta PRZY KAŻDYM otwarciu — wydajesz wersję, a
-     telefony same pokazują zielony baner przy następnym uruchomieniu.
-     (Zostawiono mini-ogranicznik 60 sekund — chroni tylko przed
-     przypadkowym zdwojeniem zapytania w tej samej minucie; jedno
-     zapytanie na otwarcie spokojnie mieści się w limicie GitHuba.)
+  Pola w formularzu same się wypełniają z już wpisanych danych:
+    - bonitacja i miąższość  (tablica SBONITA: gatunek + wiek + wysokość),
+    - zadrzewienie           (ze zwarcia),
+    - udział panującego      (z udziału drugiego gatunku — skład sumuje się do 10),
+    - miąższość wskazania    (miąższość [m³/ha] × powierzchnia wskazania [ha]),
+    - podpowiedzi wskazań    (lista wg wieku; na mokrych siedliskach + melioracja wodna).
+  Zasada: uzupełniane są tylko puste pola — wartości wpisanych ręcznie ani
+  wczytanych z pliku nie nadpisujemy. Wyczyszczenie pola = autouzupełnianie wraca.
 
-  2. OPIS BACKUPU SESJI SKRÓCONY
-     W zakładce Sync karta „Backup sesji” mówi teraz tylko:
-     „Po każdym wpisie cała sesja (autor + wszystkie opisy, bez haseł)
-     zapisuje się jako plik ForestlyGO_sesja_….json w wybranym folderze.”
-     (usunięto zdanie o czyszczeniu danych przeglądarki przez iPhone)
-
-ZMIENIONE PLIKI (względem v1.0.60)
-  index.html, js/app.js, js/wersja.js, sw.js
+ZMIENIONE PLIKI (względem v1.0.65)
+  index.html, sw.js, js/app.js, js/wersja.js, js/bonitacja.js (nowy),
+  RELEASE_NOTES.md, CO-CZYTAJ.txt
 
 WYDANIE
-  Skopiuj pliki do repo i: python release.py → v1.0.61.
+  Skopiuj pliki do repo (zachowując katalogi) i: python release.py → v1.1.0
