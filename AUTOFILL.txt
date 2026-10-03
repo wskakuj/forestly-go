@@ -1,44 +1,24 @@
-FORESTLY GO — autouzupełnianie danych (FORESTLY_GO_AUTOFILL_V2)
+FORESTLY GO — automatyka i szybsze wpisywanie (stan po v1.0.67)
 ===============================================================
 
-CO ROBI
-  Pola formularza wypełniają się same na podstawie już wpisanych danych:
+A) POLA, KTÓRE SAME SIĘ WYPEŁNIAJĄ (FORESTLY_GO_AUTOFILL_V2)
+   1. Bonitacja i miąższość — z gatunku panującego + wieku + wysokości,
+      z tablicy SBONITA (wbudowana: 738 wierszy, 10 gatunków). „Św" = „Sw".
+   2. Zadrzewienie — ze zwarcia (pełne 100, duże 90, umiark. 70, przeryw. 50,
+      rzadkie 30, luźne 20). Mapa ZADRZEW_ZWARCIE w js/app.js.
+   3. Udział panującego — z udziału drugiego gatunku (skład sumuje się do 10).
+   4. Miąższość wskazania — miąższość [m³/ha] × powierzchnia wskazania [ha].
+   5. Podpowiedzi wskazań — lista wg wieku (+ melioracja wodna na Lł/Ol/OlJ).
+   Zasada: uzupełniane są tylko puste pola i własne wcześniejsze wpisy;
+   wartości wpisanych ręcznie ani wczytanych z pliku nie nadpisujemy.
 
-  1. BONITACJA („bon.") i MIĄŻSZOŚĆ („miąż. m³/ha")
-     z gatunku panującego + wieku + wysokości, z tablicy bonitacyjnej SBONITA
-     (wbudowana w aplikację: 738 wierszy, 10 gatunków Bk, Brz, Db, Jd, Js, Md,
-     Ol, Os, So, Sw). „Św" i „Sw" traktowane tak samo.
-     Dla gatunku i wieku brana jest najbliższa grupa wiekowa, a w niej najbliższa
-     wysokość.
+B) SZYBSZE WPISYWANIE (FORESTLY_GO_OSTATNIE_V1)
+   6. Rządek „⟲ ostatnio" nad grupami chipów — najczęstsze kody na górze.
+   7. Okienko „Ostatnio wpisane" + „Skopiuj ten opis" — jednym dotknięciem
+      przenosi poprzedni opis (bez numeru wydzielenia i lokalizacji).
 
-  2. ZADRZEWIENIE („zad. %") ze zwarcia:
-     pełne 100, duże 90, umiark. 70, przeryw. 50, rzadkie 30, luźne 20.
-     (Mapa ZADRZEW_ZWARCIE w js/app.js — łatwo zmienić.)
-
-  3. UDZIAŁ PANUJĄCEGO z udziału drugiego gatunku: panujący = 10 − drugi.
-
-  4. MIĄŻSZOŚĆ WSKAZANIA („miąż. m³") = miąższość [m³/ha] × powierzchnia
-     wskazania [ha].
-
-  5. PODPOWIEDZI WSKAZAŃ (lista przy polu „wskazanie") — najpierw kody pasujące
-     do wieku, potem reszta słownika; na siedliskach mokrych (Lł, Ol, OlJ)
-     dorzucana melioracja wodna. To tylko podpowiedź — nie wpisuje się sama.
-
-ZASADA WSPÓLNA
-  - uzupełniane są tylko PUSTE pola oraz własne wcześniejsze wpisy;
-  - wartości wpisane ręcznie ani wczytane z pliku NIE są nadpisywane;
-  - wyczyszczenie pola włącza autouzupełnianie z powrotem;
-  - klasa wieku liczy się jak dotąd (bez zmian);
-  - wszystko działa offline.
-
-PLIKI ZMIENIONE (skopiuj z zachowaniem katalogów)
-  js/bonitacja.js   (NOWY) — tablica SBONITA + BONITACJA.dla(gatunek, wiek, wysokość)
-  js/app.js                — autoUzupelnij(), wypelnijWskazania(), zsynchronizujUdzial()
-  index.html               — skrypt bonitacja.js + lista podpowiedzi wskazań
-  sw.js                    — js/bonitacja.js w cache offline
-  js/wersja.js             — v1.1.0
-  RELEASE_NOTES.md         — changelog
-  CO-CZYTAJ.txt            — opis wydania
+PLIKI
+  js/bonitacja.js (nowy), js/app.js, index.html, css/app.css, sw.js, js/wersja.js
 
 WYDANIE
-  Skopiuj pliki do repo i uruchom: python release.py → v1.1.0
+  Skopiuj pliki do repo i: python release.py → v1.0.67

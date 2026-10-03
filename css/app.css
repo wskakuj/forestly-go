@@ -416,3 +416,20 @@ button { font-family: var(--font-body); }
 .pulpit-dzis { margin: 0 0 10px; padding: 9px 12px; border-radius: 10px;
   background: rgba(52, 211, 153, .10); border: 1px solid rgba(52, 211, 153, .35);
   font-size: 13.5px; }
+
+/* ---------- „ostatnio używane" kody przy chipach ---------- */
+.chips-recent { margin-bottom: 6px; }
+.chips-recent[hidden] { display: none; }
+.chips-rec-label { align-self: center; font: 600 10.5px var(--font-mono); letter-spacing: .06em;
+  color: var(--dim); opacity: .8; margin-right: 2px; text-transform: uppercase; }
+.chips-recent .chip.ostatni { border-style: dashed; opacity: .92; }
+
+/* ---------- okienko „ostatnio wpisane" w formularzu ---------- */
+.ostatni-box { background: var(--panel2); border: 1px solid var(--line); border-left: 3px solid var(--green);
+  border-radius: var(--radius); padding: 10px 12px; margin: 0 0 12px; }
+.ostatni-box[hidden] { display: none; }
+.ob-head { font: 600 12px var(--font-mono); letter-spacing: .04em; color: var(--dim); margin-bottom: 6px; }
+.ob-head b { color: var(--ink); }
+.ob-podglad { margin: 0 0 8px; font: 12px/1.4 var(--font-mono); color: var(--ink); white-space: pre-wrap;
+  max-height: 110px; overflow: auto; }
+.ob-kopiuj { width: 100%; }

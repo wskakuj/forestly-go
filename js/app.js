@@ -38,6 +38,30 @@ const WSKAZA_WIEK = [
 const SIEDL_MOKRE = new Set(["Lł", "Ol", "OlJ"]);
 const GRUPY_WIELOKROTNE = new Set(["pjd", "podsz"]);
 
+/* ---------- „ostatnio używane" kody (FORESTLY_GO_OSTATNIE_V1) ----------
+   Osobny rządek chipów nad każdą grupą — najczęściej używane kody ma pod ręką,
+   bez przewijania całego słownika. Trzymane w localStorage. */
+const OSTATNIE_MAX = 6;
+const OSTATNIE_GRUPY = ["siedlisko", "panujacy", "drugi", "zwarcie", "pjd", "podsz"];
+let OSTATNIE = {};
+try { OSTATNIE = JSON.parse(localStorage.getItem("fg_ostatnie") || "{}") || {}; } catch (e) { OSTATNIE = {}; }
+
+function zapamietajOstatnie(g, v) {
+  if (!OSTATNIE_GRUPY.includes(g) || !v) return;
+  const arr = (OSTATNIE[g] || []).filter(x => x !== v);
+  arr.unshift(v);
+  OSTATNIE[g] = arr.slice(0, OSTATNIE_MAX);
+  try { localStorage.setItem("fg_ostatnie", JSON.stringify(OSTATNIE)); } catch (e) {}
+}
+function zapamietajOstatnieZFormularza() {
+  zapamietajOstatnie("siedlisko", stan.siedlisko);
+  zapamietajOstatnie("panujacy", stan.panujacy);
+  zapamietajOstatnie("drugi", stan.drugi);
+  zapamietajOstatnie("zwarcie", stan.zwarcie);
+  (stan.pjd || []).forEach(v => zapamietajOstatnie("pjd", v));
+  (stan.podsz || []).forEach(v => zapamietajOstatnie("podsz", v));
+}
+
 /* ---------- stan formularza ---------- */
 let stan = nowyStan();
 let trybEdycji = null; // id wpisu, który edytujemy
@@ -84,6 +108,7 @@ function przelaczTab(nazwa) {
   if (nazwa === "wykaz") rysujWykaz();
   if (nazwa === "sync") rysujSync();
   if (nazwa === "wsie") rysujPulpitWsi();
+  if (nazwa === "form") odswiezOstatni();
 }
 
 /* ---------- pulpit wsi ---------- */
@@ -368,6 +393,15 @@ async function odswiezAppbar() {
 function renderChips() {
   document.querySelectorAll(".chips[data-group]").forEach(box => {
     const g = box.dataset.group;
+    if (box.dataset.recent) {
+      /* rządek „ostatnio" — tylko kody nadal obecne w słowniku */
+      const rec = (OSTATNIE[g] || []).filter(v => (SLOWNIKI[g] || []).includes(v));
+      if (!rec.length) { box.innerHTML = ""; box.hidden = true; return; }
+      box.hidden = false;
+      box.innerHTML = '<span class="chips-rec-label">⟲ ostatnio</span>' +
+        rec.map(v => `<span class="chip ostatni ${jestAktywny(g, v) ? "on" : ""}" data-v="${v}">${v}</span>`).join("");
+      return;
+    }
     box.innerHTML = SLOWNIKI[g].map(v =>
       `<span class="chip ${jestAktywny(g, v) ? "on" : ""}" data-v="${v}">${v}</span>`).join("");
   });
@@ -393,6 +427,7 @@ document.addEventListener("click", e => {
     const i = stan[g].indexOf(v);
     if (i >= 0) stan[g].splice(i, 1); else stan[g].push(v);
   }
+  if (jestAktywny(g, v)) zapamietajOstatnie(g, v);
   renderChips(); rysuj();
 });
 
@@ -831,6 +866,7 @@ async function zapiszWpis(pominWalidacje) {
     status: trybEdycji ? "wkolejce" : "lokalny",
     poprawionyPoWyslce: undefined
   });
+  zapamietajOstatnieZFormularza();   /* kody z zapisanego opisu na rządek „ostatnio" */
   await DB.wpisyPut(wpis);
   try { localStorage.removeItem(SZKIC); } catch (e) {}   /* zapisane = szkic zbędny */
   CLOUDS.log("<b>zapisano wpis</b> " + oddzPelne(wpis) + " (" + wpis.wies + ") — " + (trybEdycji ? "poprawka, plik w kolejce" : "lokalny"));
@@ -840,6 +876,7 @@ async function zapiszWpis(pominWalidacje) {
   const zapisanaWies = wpis.wies;
   /* formularz od razu ustawiony na tę samą wieś — kolejny opis bez klikania */
   stan = nowyStan(); stan.wies = zapisanaWies; uzupelnijForm(); rysuj();
+  odswiezOstatni();
   // wracamy do widoku opisów wsi, do której należy zapisany opis
   aktywnaWies = zapisanaWies;
   localStorage.setItem("aktywnaWies", aktywnaWies);
@@ -939,6 +976,52 @@ function uzupelnijForm() {
   renderChips();
 }
 
+/* ---------- kopiowanie wpisu + okienko „ostatnio wpisane" ---------- */
+/* kopia wpisu do edycji: bez numeru wydzielenia i lokalizacji (to są rzeczy
+   nowego wydzielenia), cała reszta pól zostaje */
+function kopiujWpis(w) {
+  if (!w) return;
+  const kopia = Object.assign(nowyStan(), w, {
+    dzialki: [], lat: null, lon: null, locZrodlo: null,
+    wersja: 1, status: "lokalny",
+    ostatniaWysylka: undefined, poprawionyPoWyslce: undefined
+  });
+  delete kopia.id; delete kopia.timestamp;
+  trybEdycji = null;
+  if (w.wies) { aktywnaWies = w.wies; try { localStorage.setItem("aktywnaWies", aktywnaWies); } catch (e) {} }
+  stan = kopia;
+  uzupelnijForm(); rysuj(); przelaczTab("form");
+  toast("Skopiowano opis — uzupełnij numer wydzielenia i zapisz", 5000);
+}
+
+let ostatniWpis = null;   // ostatnio zapisany wpis (do podglądu i skopiowania)
+
+async function odswiezOstatni() {
+  const box = $("#ostatni-box"); if (!box) return;
+  try {
+    const wszystkie = (await DB.wpisyAll()).filter(x => !x.usuniety && x.id !== trybEdycji);
+    const poCzasie = arr => arr.slice().sort((a, b) =>
+      String(b.timestamp || "").localeCompare(String(a.timestamp || "")));
+    let kand = null;
+    if (stan.wies) kand = poCzasie(wszystkie.filter(x => x.wies === stan.wies))[0];
+    if (!kand) kand = poCzasie(wszystkie)[0];
+    if (!kand) { ostatniWpis = null; box.hidden = true; return; }
+    ostatniWpis = kand;
+    box.hidden = false;
+    const t = $("#ob-tytul");
+    if (t) t.textContent = identyfikatorWpisu(kand) + (kand.wies ? " · " + kand.wies : "");
+    const p = $("#ob-podglad");
+    if (p) p.textContent = OPTAX.linie(kand).join("\n") || "—";
+  } catch (e) { ostatniWpis = null; box.hidden = true; }
+}
+{
+  const bk = $("#btn-kopiuj-ostatni");
+  if (bk) bk.addEventListener("click", () => {
+    if (!ostatniWpis) { toast("Brak wcześniejszego wpisu do skopiowania"); return; }
+    kopiujWpis(ostatniWpis);
+  });
+}
+
 /* ---------- wykaz ---------- */
 function identyfikatorWpisu(x) {
   const d = Array.isArray(x.dzialki) ? x.dzialki.join(", ") : (x.dzialki || "");
@@ -1008,16 +1091,7 @@ $("#wykaz-lista").addEventListener("click", async e => {
     e.stopPropagation();
     const w = (await DB.wpisyAll()).find(x => x.id === dup.dataset.dup);
     if (!w) return;
-    const kopia = Object.assign(nowyStan(), w, {
-      dzialki: [], lat: null, lon: null, locZrodlo: null,
-      wersja: 1, status: "lokalny",
-      ostatniaWysylka: undefined, poprawionyPoWyslce: undefined
-    });
-    delete kopia.id; delete kopia.timestamp;
-    trybEdycji = null; stan = kopia;
-    if (w.wies) { aktywnaWies = w.wies; localStorage.setItem("aktywnaWies", aktywnaWies); }
-    uzupelnijForm(); rysuj(); przelaczTab("form");
-    toast("Kopia wydzielenia — uzupełnij numer wydzielenia i zapisz", 6000);
+    kopiujWpis(w);
     return;
   }
   const item = e.target.closest(".row-item");

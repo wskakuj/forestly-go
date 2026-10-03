@@ -7,7 +7,7 @@
 <!-- wersja tego pliku HTML — samonaprawa w app.js porównuje ją z wersją
      skryptów; przy niezgodności (aktualizacja w tle podała miks plików)
      strona przeładowuje się RAZ i dostaje spójny komplet -->
-<script>window.__htmlWersja = "1.0.66";</script>
+<script>window.__htmlWersja = "1.0.67";</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -58,6 +58,12 @@
   <div class="pane" id="pane-form">
     <div class="scroller">
 
+      <div class="ostatni-box" id="ostatni-box" hidden>
+        <div class="ob-head">⟲ Ostatnio wpisane: <b id="ob-tytul"></b></div>
+        <pre class="ob-podglad" id="ob-podglad"></pre>
+        <button type="button" class="loc-btn ob-kopiuj" id="btn-kopiuj-ostatni">⧉ Skopiuj ten opis</button>
+      </div>
+
       <div class="f-sekcja">
         <div class="f-sek-nag">📍 Gdzie</div>
 
@@ -83,11 +89,13 @@
 
         <div class="f-group">
           <div class="f-label">Siedlisko</div>
+          <div class="chips chips-recent" data-group="siedlisko" data-recent="1"></div>
           <div class="chips" data-group="siedlisko"></div>
         </div>
 
         <div class="f-group">
           <div class="f-label">Gatunek panujący</div>
+          <div class="chips chips-recent" data-group="panujacy" data-recent="1"></div>
           <div class="chips" data-group="panujacy"></div>
           <div class="stepper">
             <button type="button" data-step="udzialpan" data-dir="-1">−</button>
@@ -98,6 +106,7 @@
 
         <div class="f-group">
           <div class="f-label">Drugi gatunek <span class="sub">udział kręcisz obok</span></div>
+          <div class="chips chips-recent" data-group="drugi" data-recent="1"></div>
           <div class="chips" data-group="drugi"></div>
           <div class="stepper">
             <button type="button" data-step="udzial" data-dir="-1">−</button>
@@ -117,6 +126,7 @@
 
         <div class="f-group">
           <div class="f-label">Przedrostek / drugie piętro <span class="sub">pjd. — wiele gatunków</span></div>
+          <div class="chips chips-recent" data-group="pjd" data-recent="1"></div>
           <div class="chips" data-group="pjd"></div>
           <div class="stepper">
             <button type="button" data-step="pjdwiek" data-dir="-5">−</button>
@@ -127,6 +137,7 @@
 
         <div class="f-group">
           <div class="f-label">Zwarcie</div>
+          <div class="chips chips-recent" data-group="zwarcie" data-recent="1"></div>
           <div class="chips" data-group="zwarcie"></div>
         </div>
       </div>
@@ -136,6 +147,7 @@
 
         <div class="f-group">
           <div class="f-label">Podszyt <span class="sub">wiele gatunków</span></div>
+          <div class="chips chips-recent" data-group="podsz" data-recent="1"></div>
           <div class="chips" data-group="podsz"></div>
           <div class="stepper">
             <button type="button" data-step="podszproc" data-dir="-10">−</button>

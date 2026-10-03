@@ -1,4 +1,3 @@
-# Co nowego w Forestly GO v1.0.66
+# Co nowego w Forestly GO v1.0.67
 
-* autofill
-
+- 

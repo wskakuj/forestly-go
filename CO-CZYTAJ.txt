@@ -1,19 +1,21 @@
-FORESTLY GO v1.1.0 — autouzupełnianie danych
-============================================
+FORESTLY GO v1.0.67 — szybsze wpisywanie
+========================================
 
 CO NOWEGO
-  Pola w formularzu same się wypełniają z już wpisanych danych:
-    - bonitacja i miąższość  (tablica SBONITA: gatunek + wiek + wysokość),
-    - zadrzewienie           (ze zwarcia),
-    - udział panującego      (z udziału drugiego gatunku — skład sumuje się do 10),
-    - miąższość wskazania    (miąższość [m³/ha] × powierzchnia wskazania [ha]),
-    - podpowiedzi wskazań    (lista wg wieku; na mokrych siedliskach + melioracja wodna).
-  Zasada: uzupełniane są tylko puste pola — wartości wpisanych ręcznie ani
-  wczytanych z pliku nie nadpisujemy. Wyczyszczenie pola = autouzupełnianie wraca.
+  1. RZĄDEK „OSTATNIO" PRZY CHIPACH
+     Nad każdą grupą (siedlisko, gatunek panujący, drugi, zwarcie, przedrostek,
+     podszyt) pojawia się osobny rządek „⟲ ostatnio" z najczęściej używanymi
+     kodami — bez przewijania słownika. Pełna lista zostaje nienaruszona.
 
-ZMIENIONE PLIKI (względem v1.0.65)
-  index.html, sw.js, js/app.js, js/wersja.js, js/bonitacja.js (nowy),
+  2. OKIENKO „OSTATNIO WPISANE" + KOPIUJ
+     Na górze formularza jest podgląd ostatnio zapisanego opisu (skład, wiek,
+     zwarcie, numery wydzielenia) i przycisk „Skopiuj ten opis". Przenosi cały
+     poprzedni opis do formularza — bez numeru wydzielenia i lokalizacji.
+     Zostaje dopisać numer wydzielenia i zapisać.
+
+ZMIENIONE PLIKI (względem v1.0.66)
+  index.html, css/app.css, js/app.js, js/wersja.js, sw.js,
   RELEASE_NOTES.md, CO-CZYTAJ.txt
 
 WYDANIE
-  Skopiuj pliki do repo (zachowując katalogi) i: python release.py → v1.1.0
+  Skopiuj pliki do repo (zachowując katalogi) i: python release.py → v1.0.67
