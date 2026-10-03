@@ -1,22 +1,18 @@
-FORESTLY GO v1.0.68 — wskazania: wygodniejszy wybór
-===================================================
+FORESTLY GO v1.0.69 — motyw jasny / wysokiego kontrastu
+======================================================
 
 CO NOWEGO
-  1. LISTA WSKAZAŃ OTWIERA SIĘ ZAWSZE
-     Dotknięcie pola „wskazanie" rozwija listę kodów także wtedy, gdy pole ma już
-     wartość. Wcześniej po wyborze nie dało się listy ponownie otworzyć.
+  1. PRZEŁĄCZNIK MOTYWU W PASKU GÓRNYM (☀ / ☾)
+     Jasny motyw jest czytelniejszy w pełnym słońcu. Wybór zapamiętuje się między
+     uruchomieniami i jest ustawiany już przy starcie (bez mignięcia tła).
 
-  2. „OSTATNIO" NA GÓRZE LISTY WSKAZAŃ
-     Ostatnio używane kody (oznaczone „⟲") są pierwsze — powtarzające się wskazania
-     wybiera się jednym dotknięciem.
+  2. KONTRAST SPRAWDZONY
+     W obu motywach przeliczyłem kontrast tekstu do tła — żaden napis nie zlewa się
+     z tłem. Belka podglądu OPTAX celowo zostaje ciemna (wygląda jak wydruk).
 
-  3. FILTROWANIE PRZY PISANIU
-     Wpisanie kilku liter zawęża listę; dotknięcie poza listą ją zamyka.
-     Podpowiedzi nadal zależą od wieku (+ melioracja wodna na Lł/Ol/OlJ).
-
-ZMIENIONE PLIKI (względem v1.0.67)
+ZMIENIONE PLIKI (względem v1.0.68)
   index.html, css/app.css, js/app.js, js/wersja.js, sw.js,
   RELEASE_NOTES.md, CO-CZYTAJ.txt
 
 WYDANIE
-  Skopiuj pliki do repo (zachowując katalogi) i: python release.py → v1.0.68
+  Skopiuj pliki do repo (zachowując katalogi) i: python release.py → v1.0.69

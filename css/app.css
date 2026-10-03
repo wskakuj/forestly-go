@@ -436,3 +436,34 @@ button { font-family: var(--font-body); }
 
 /* „ostatnio używane" wskazania w rozwijanej liście */
 .auto-poz.ostatni { color: var(--accent); font-weight: 600; }
+
+/* ===================== MOTYW JASNY / WYSOKI KONTRAST =====================
+   Włącza się atrybutem data-motyw="jasny" na <html> (przycisk w pasku górnym).
+   Belka podglądu OPTAX zostaje ciemna — celowo wygląda jak wydruk. */
+html[data-motyw="jasny"] {
+  --bg: #eef2ec; --panel: #ffffff; --panel2: #f4f7f1; --wewnetrzny: #e9eee6;
+  --ink: #14231a; --dim: #55645a;
+  --line: rgba(0, 0, 0, .14); --line2: rgba(0, 0, 0, .28);
+  --accent: #0b7a5c; --accent2: #0a6f96;
+}
+html[data-motyw="jasny"] body { background-image: none; }
+html[data-motyw="jasny"] .appbar { background: rgba(255, 255, 255, .95); box-shadow: 0 2px 10px rgba(0, 0, 0, .06); }
+html[data-motyw="jasny"] .bnav { background: #ffffff; }
+html[data-motyw="jasny"] .bnav .bn { color: #6f7d72; }
+html[data-motyw="jasny"] .chip { background: #f7faf5; }
+html[data-motyw="jasny"] .st-off { color: #c0392b; }
+html[data-motyw="jasny"] .f-label { color: #55645a; }
+html[data-motyw="jasny"] .cloud-row,
+html[data-motyw="jasny"] .chmura { border-color: rgba(0, 0, 0, .14); }
+html[data-motyw="jasny"] .onb-kroki i { background: rgba(0, 0, 0, .12); }
+html[data-motyw="jasny"] .toast { background: #24312a; color: #f2f8f3; }
+html[data-motyw="jasny"] .zapis-pasek { background: rgba(255, 255, 255, .97); }
+html[data-motyw="jasny"] .f-label .sub { color: #5f6d63; }
+html[data-motyw="jasny"] .zp-suma-sub { color: #3d4a42; }
+
+/* przycisk przełączania motywu w pasku górnym */
+.motyw-btn { flex: none; width: 32px; height: 32px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--line2); background: var(--wewnetrzny); color: var(--ink);
+  font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.motyw-btn:active { transform: scale(.94); }
+html[data-motyw="jasny"] .chips-rec-label { opacity: 1; color: #4d5c52; }

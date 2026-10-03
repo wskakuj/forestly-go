@@ -2104,6 +2104,29 @@ $("#okno-chmur").addEventListener("click", e => {
   if (e.target.id === "okno-chmur") $("#okno-chmur").classList.remove("on");
 });
 
+/* ---------- motyw: ciemny / jasny (FORESTLY_GO_MOTYW_V1) ----------
+   Przełącznik w pasku górnym; wybór trzymany w localStorage i ustawiany już
+   w <head>, żeby przy starcie nie mignęło tło. */
+function zastosujMotyw(m) {
+  const jasny = m === "jasny";
+  document.documentElement.dataset.motyw = jasny ? "jasny" : "ciemny";
+  const b = $("#btn-motyw");
+  if (b) { b.textContent = jasny ? "☾" : "☀"; b.title = jasny ? "Przełącz na ciemny" : "Przełącz na jasny"; }
+  const mt = document.querySelector('meta[name="theme-color"]');
+  if (mt) mt.setAttribute("content", jasny ? "#eef2ec" : "#0b0f14");
+  try { localStorage.setItem("fg_motyw", jasny ? "jasny" : "ciemny"); } catch (e) {}
+}
+(function initMotyw() {
+  let m = "ciemny";
+  try { m = localStorage.getItem("fg_motyw") || "ciemny"; } catch (e) {}
+  zastosujMotyw(m);
+})();
+{
+  const bm = $("#btn-motyw");
+  if (bm) bm.addEventListener("click", () =>
+    zastosujMotyw(document.documentElement.dataset.motyw === "jasny" ? "ciemny" : "jasny"));
+}
+
 /* ---------- samonaprawa wersji ----------
    Przy aktualizacji w tle service worker potrafi podać pliki z DWÓCH wersji
    naraz (np. nowy app.js + stary index.html). Każdy nasłuch jest już
