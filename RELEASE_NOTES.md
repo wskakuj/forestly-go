@@ -1,4 +1,3 @@
-# Co nowego w Forestly GO v1.0.69
+# Co nowego w Forestly GO v1.0.70
 
-* tryb jasny dodany
-
+- 
