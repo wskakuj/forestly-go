@@ -1,21 +1,22 @@
-FORESTLY GO v1.0.67 — szybsze wpisywanie
-========================================
+FORESTLY GO v1.0.68 — wskazania: wygodniejszy wybór
+===================================================
 
 CO NOWEGO
-  1. RZĄDEK „OSTATNIO" PRZY CHIPACH
-     Nad każdą grupą (siedlisko, gatunek panujący, drugi, zwarcie, przedrostek,
-     podszyt) pojawia się osobny rządek „⟲ ostatnio" z najczęściej używanymi
-     kodami — bez przewijania słownika. Pełna lista zostaje nienaruszona.
+  1. LISTA WSKAZAŃ OTWIERA SIĘ ZAWSZE
+     Dotknięcie pola „wskazanie" rozwija listę kodów także wtedy, gdy pole ma już
+     wartość. Wcześniej po wyborze nie dało się listy ponownie otworzyć.
 
-  2. OKIENKO „OSTATNIO WPISANE" + KOPIUJ
-     Na górze formularza jest podgląd ostatnio zapisanego opisu (skład, wiek,
-     zwarcie, numery wydzielenia) i przycisk „Skopiuj ten opis". Przenosi cały
-     poprzedni opis do formularza — bez numeru wydzielenia i lokalizacji.
-     Zostaje dopisać numer wydzielenia i zapisać.
+  2. „OSTATNIO" NA GÓRZE LISTY WSKAZAŃ
+     Ostatnio używane kody (oznaczone „⟲") są pierwsze — powtarzające się wskazania
+     wybiera się jednym dotknięciem.
 
-ZMIENIONE PLIKI (względem v1.0.66)
+  3. FILTROWANIE PRZY PISANIU
+     Wpisanie kilku liter zawęża listę; dotknięcie poza listą ją zamyka.
+     Podpowiedzi nadal zależą od wieku (+ melioracja wodna na Lł/Ol/OlJ).
+
+ZMIENIONE PLIKI (względem v1.0.67)
   index.html, css/app.css, js/app.js, js/wersja.js, sw.js,
   RELEASE_NOTES.md, CO-CZYTAJ.txt
 
 WYDANIE
-  Skopiuj pliki do repo (zachowując katalogi) i: python release.py → v1.0.67
+  Skopiuj pliki do repo (zachowując katalogi) i: python release.py → v1.0.68

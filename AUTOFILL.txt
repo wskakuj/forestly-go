@@ -1,4 +1,4 @@
-FORESTLY GO — automatyka i szybsze wpisywanie (stan po v1.0.67)
+FORESTLY GO — automatyka i szybsze wpisywanie (stan po v1.0.68)
 ===============================================================
 
 A) POLA, KTÓRE SAME SIĘ WYPEŁNIAJĄ (FORESTLY_GO_AUTOFILL_V2)
@@ -16,9 +16,11 @@ B) SZYBSZE WPISYWANIE (FORESTLY_GO_OSTATNIE_V1)
    6. Rządek „⟲ ostatnio" nad grupami chipów — najczęstsze kody na górze.
    7. Okienko „Ostatnio wpisane" + „Skopiuj ten opis" — jednym dotknięciem
       przenosi poprzedni opis (bez numeru wydzielenia i lokalizacji).
+   8. Wskazania: rozwijana lista otwiera się zawsze (także po wyborze), z ostatnio
+      użytymi kodami („⟲") na górze i filtrowaniem przy pisaniu.
 
 PLIKI
   js/bonitacja.js (nowy), js/app.js, index.html, css/app.css, sw.js, js/wersja.js
 
 WYDANIE
-  Skopiuj pliki do repo i: python release.py → v1.0.67
+  Skopiuj pliki do repo i: python release.py → v1.0.68

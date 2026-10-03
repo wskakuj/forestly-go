@@ -433,3 +433,6 @@ button { font-family: var(--font-body); }
 .ob-podglad { margin: 0 0 8px; font: 12px/1.4 var(--font-mono); color: var(--ink); white-space: pre-wrap;
   max-height: 110px; overflow: auto; }
 .ob-kopiuj { width: 100%; }
+
+/* „ostatnio używane" wskazania w rozwijanej liście */
+.auto-poz.ostatni { color: var(--accent); font-weight: 600; }

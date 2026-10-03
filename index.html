@@ -7,7 +7,7 @@
 <!-- wersja tego pliku HTML — samonaprawa w app.js porównuje ją z wersją
      skryptów; przy niezgodności (aktualizacja w tle podała miks plików)
      strona przeładowuje się RAZ i dostaje spójny komplet -->
-<script>window.__htmlWersja = "1.0.67";</script>
+<script>window.__htmlWersja = "1.0.68";</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -176,7 +176,10 @@
           <summary>Wskazania <span class="sub">opcjonalnie</span></summary>
           <div class="f-wnetrze">
             <div class="f-row3">
-              <input class="f-input" id="w-typ" list="dl-wsk" placeholder="TP-40" autocomplete="off">
+              <div class="auto-box">
+                <input class="f-input" id="w-typ" placeholder="wskazanie" autocomplete="off">
+                <div class="auto-lista" id="auto-wsk"></div>
+              </div>
               <input class="f-input" id="w-pow" inputmode="decimal" placeholder="pow. ha" autocomplete="off">
               <input class="f-input" id="w-miaz" inputmode="decimal" placeholder="miąż. m³" autocomplete="off">
             </div>
@@ -443,7 +446,6 @@
 <script src="js/sekret.js"></script>
 <script src="js/clouds.js"></script>
 <script src="js/session.js"></script>
-<datalist id="dl-wsk"></datalist>
 <script src="js/wersja.js"></script>
 <script src="js/pliki.js"></script>
 <script src="js/bonitacja.js"></script>

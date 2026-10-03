@@ -42,7 +42,7 @@ const GRUPY_WIELOKROTNE = new Set(["pjd", "podsz"]);
    Osobny rządek chipów nad każdą grupą — najczęściej używane kody ma pod ręką,
    bez przewijania całego słownika. Trzymane w localStorage. */
 const OSTATNIE_MAX = 6;
-const OSTATNIE_GRUPY = ["siedlisko", "panujacy", "drugi", "zwarcie", "pjd", "podsz"];
+const OSTATNIE_GRUPY = ["siedlisko", "panujacy", "drugi", "zwarcie", "pjd", "podsz", "wskTyp"];
 let OSTATNIE = {};
 try { OSTATNIE = JSON.parse(localStorage.getItem("fg_ostatnie") || "{}") || {}; } catch (e) { OSTATNIE = {}; }
 
@@ -60,6 +60,7 @@ function zapamietajOstatnieZFormularza() {
   zapamietajOstatnie("zwarcie", stan.zwarcie);
   (stan.pjd || []).forEach(v => zapamietajOstatnie("pjd", v));
   (stan.podsz || []).forEach(v => zapamietajOstatnie("podsz", v));
+  zapamietajOstatnie("wskTyp", stan.wskTyp);
 }
 
 /* ---------- stan formularza ---------- */
@@ -550,24 +551,23 @@ function autoUzupelnij() {
   if (isFinite(mm) && isFinite(pw) && pw > 0) autoUstaw("wskMiaz", Math.round(mm * pw * 10) / 10, "#w-miaz");
 }
 
-/* podpowiedzi wskazań: pasujące do wieku na początku, potem reszta słownika */
-function wypelnijWskazania() {
-  const dl = $("#dl-wsk"); if (!dl) return;
+/* Lista wskazań do rozwijanej podpowiedzi: najpierw ostatnio używane, potem
+   pasujące do wieku, na końcu reszta słownika. */
+function wskazaniaLista() {
   const w = stan.wiekPrzec || 0;
-  let biezace = null;
+  let biezace = [];
   for (const g of WSKAZA_WIEK) { if (w <= g.do) { biezace = g.kody.slice(); break; } }
-  const zestaw = biezace || [];
-  if (SIEDL_MOKRE.has(stan.siedlisko) && !zestaw.includes("Mel.wodne")) zestaw.push("Mel.wodne");
-  WSKAZA_KODY.forEach(k => { if (!zestaw.includes(k)) zestaw.push(k); });
-  const klucz = w + "|" + stan.siedlisko + "|" + zestaw.join(",");
-  if (dl.dataset.klucz === klucz) return;
-  dl.dataset.klucz = klucz;
-  dl.innerHTML = zestaw.map(k => '<option value="' + k + '"></option>').join("");
+  if (SIEDL_MOKRE.has(stan.siedlisko) && !biezace.includes("Mel.wodne")) biezace.push("Mel.wodne");
+  const out = [];
+  const push = k => { if (k && !out.includes(k)) out.push(k); };
+  (OSTATNIE.wskTyp || []).forEach(push);
+  biezace.forEach(push);
+  WSKAZA_KODY.forEach(push);
+  return out;
 }
 
 function rysuj() {
   autoUzupelnij();
-  wypelnijWskazania();
   const kPan = OPTAX.krok(stan.wiekPrzec);
   $("#wiek-linia").textContent = (stan.wiekPrzec - kPan) + "–" + (stan.wiekPrzec + kPan) + " / " + stan.wiekPrzec + " l";
   $("#wiek-klasa").textContent = "klasa wieku " + OPTAX.klasaWieku(stan.wiekPrzec);
@@ -1857,6 +1857,44 @@ function bindAutoWsie() {
   });
 }
 bindAutoWsie();
+
+/* ---------- wskazania: rozwijana lista (otwiera się też po wyborze) ---------- */
+function bindAutoWsk() {
+  const inp = $("#w-typ"), lista = $("#auto-wsk");
+  if (!inp || !lista) return;
+  const pokaz = wszystko => {
+    const q = wszystko ? "" : inp.value.trim().toLowerCase();
+    let poz = wskazaniaLista();
+    if (q) poz = poz.filter(k => k.toLowerCase().includes(q));
+    poz = poz.slice(0, 40);
+    if (!poz.length) { lista.classList.remove("on"); return; }
+    const rec = new Set(OSTATNIE.wskTyp || []);
+    lista.innerHTML = poz.map(k =>
+      `<div class="auto-poz${rec.has(k) ? " ostatni" : ""}" data-w="${k}">${rec.has(k) ? "⟲ " : ""}${k}</div>`).join("");
+    lista.classList.add("on");
+  };
+  inp.addEventListener("input", () => pokaz(false));
+  inp.addEventListener("focus", () => pokaz(true));   // pełna lista, nawet gdy pole ma wartość
+  inp.addEventListener("click", () => pokaz(true));
+  inp.addEventListener("blur", () => setTimeout(() => lista.classList.remove("on"), 140));
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Escape") { lista.classList.remove("on"); e.preventDefault(); }
+  });
+  lista.addEventListener("mousedown", e => {
+    const poz = e.target.closest(".auto-poz");
+    if (!poz) return;
+    e.preventDefault();                  // nie gub fokusu zanim wybierzemy
+    inp.value = poz.dataset.w;
+    lista.classList.remove("on");
+    stan.wskTyp = poz.dataset.w;
+    zapamietajOstatnie("wskTyp", poz.dataset.w);
+    rysuj();
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#w-typ") && !e.target.closest("#auto-wsk")) lista.classList.remove("on");
+  });
+}
+bindAutoWsk();
 
 /* ---------- sprawdzanie aktualizacji (ręczny przycisk w Sync) ---------- */
 async function sprawdzAktualizacjeRecznie() {
