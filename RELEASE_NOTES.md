@@ -1,3 +1,3 @@
-# Co nowego w Forestly GO v1.0.70
+# Co nowego w Forestly GO v1.0.71
 
 - 

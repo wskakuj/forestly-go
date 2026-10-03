@@ -71,6 +71,9 @@ button { font-family: var(--font-body); }
 .bnav .bn svg { display: block; margin: 0 auto 3px; opacity: .8; }
 .bnav .bn span { font-size: 10.5px; font-weight: 700; }
 .bnav .bn.on { color: var(--accent); }
+.bnav .bn { position: relative; }
+.bnav .bn.on::after { content: ""; position: absolute; top: 0; left: 24%; right: 24%; height: 3px;
+  border-radius: 0 0 3px 3px; background: var(--accent); }
 .bnav .bn.on svg { opacity: 1; }
 
 /* ---------- pulpit wsi (pierwszy ekran) ---------- */
@@ -454,9 +457,10 @@ html[data-motyw="jasny"] .f-sekcja { background: #ffffff; border-color: rgba(0, 
 html[data-motyw="jasny"] .chip {
   background: #e4eae0; border-color: rgba(0, 0, 0, .16); box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
 }
-html[data-motyw="jasny"] .chip.on { border-color: transparent; box-shadow: 0 4px 14px rgba(45, 212, 167, .32); }
+html[data-motyw="jasny"] .chip.on { background: var(--grad); border-color: transparent; box-shadow: 0 4px 14px rgba(45, 212, 167, .32); }
 html[data-motyw="jasny"] .chip-x { background: #e4eae0; border-color: rgba(0, 0, 0, .16); }
 html[data-motyw="jasny"] .f-input { background: #f2f6ec; border-color: rgba(0, 0, 0, .20); }
+html[data-motyw="jasny"] .f-input:focus { border-color: var(--accent); }
 html[data-motyw="jasny"] .stepper { background: #eef2e9; }
 html[data-motyw="jasny"] .stepper button { background: #ffffff; border-color: rgba(0, 0, 0, .18); }
 html[data-motyw="jasny"] .stepper button:active { background: #e4eae0; }
@@ -466,7 +470,12 @@ html[data-motyw="jasny"] .motyw-btn { background: #eef2e9; border-color: rgba(0,
 html[data-motyw="jasny"] body { background-image: none; }
 html[data-motyw="jasny"] .appbar { background: rgba(255, 255, 255, .95); box-shadow: 0 2px 10px rgba(0, 0, 0, .06); }
 html[data-motyw="jasny"] .bnav { background: #ffffff; }
-html[data-motyw="jasny"] .bnav .bn { color: #6f7d72; }
+html[data-motyw="jasny"] .bnav .bn { color: #8a978e; position: relative; }
+html[data-motyw="jasny"] .bnav .bn.on { color: #076049; }
+html[data-motyw="jasny"] .bnav .bn.on::after {
+  content: ""; position: absolute; top: 0; left: 24%; right: 24%; height: 3px;
+  border-radius: 0 0 3px 3px; background: var(--accent);
+}
 html[data-motyw="jasny"] .st-off { color: #c0392b; }
 html[data-motyw="jasny"] .f-label { color: #55645a; }
 html[data-motyw="jasny"] .cloud-row,
